@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { symbolMapper } from "@builder.io/qwik/optimizer";
 import type { Node } from "@oxc-project/types";
 import { anyOf, createRegExp, exactly, maybe } from "magic-regexp";
 import MagicString from "magic-string";
@@ -329,8 +328,6 @@ export function testSSR(): Plugin {
 			},
 		},
 		configResolved(config) {
-			globalThis.qwikSymbolMapper = symbolMapper;
-
 			if (config.test?.browser?.enabled) {
 				config.test.browser.commands = {
 					...config.test.browser.commands,

@@ -247,8 +247,6 @@ export async function renderComponentToSSR(
 	await renderToStream(jsxElement, {
 		containerTagName: "div",
 		base: "/",
-		qwikLoader: "inline",
-		symbolMapper: globalThis.qwikSymbolMapper,
 		stream: {
 			write(chunk: string) {
 				html += chunk;
