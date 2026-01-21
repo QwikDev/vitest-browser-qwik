@@ -1,6 +1,6 @@
-import type { JSXOutput } from "@builder.io/qwik";
-import { component$, render as qwikRender } from "@builder.io/qwik";
-import { getQwikLoaderScript } from "@builder.io/qwik/server";
+import type { JSXOutput } from "@qwik.dev/core";
+import { component$, render as qwikRender } from "@qwik.dev/core";
+import { getQwikLoaderScript } from "@qwik.dev/core/server";
 import type { Locator, LocatorSelectors } from "vitest/browser";
 import { type PrettyDOMOptions, utils } from "vitest/browser";
 
@@ -83,14 +83,14 @@ function setupContainer(
 	return { container, baseElement };
 }
 
-export function render(
+export async function render(
 	ui: JSXOutput,
 	{ container, baseElement }: RenderOptions = {},
-): RenderResult {
+): Promise<RenderResult> {
 	csrQwikLoader();
 
 	const setup = setupContainer(baseElement, container);
-	qwikRender(setup.container, ui);
+	await qwikRender(setup.container, ui);
 
 	return createRenderResult(setup.container, setup.baseElement);
 }

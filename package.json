@@ -62,14 +62,14 @@
 		"oxc-resolver": "^11.11.1"
 	},
 	"peerDependencies": {
-		"@builder.io/qwik": ">=1.14.1",
+		"@qwik.dev/core": "*",
 		"vite": ">=6.3.5",
 		"vitest": "^4.0.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.0.0",
 		"@playwright/test": "see flake.nix",
-		"@builder.io/qwik": "^1.17",
+		"@qwik.dev/core": "*",
 		"@types/node": "^22.15.17",
 		"@vitest/browser-playwright": "^4.0.0",
 		"magic-regexp": "^0.10.0",

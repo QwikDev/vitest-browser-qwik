@@ -1,4 +1,4 @@
-import type { JSXNode, JSXOutput } from "@builder.io/qwik";
+import type { JSXNode, JSXOutput } from "@qwik.dev/core";
 import { beforeEach } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, type RenderResult, render, renderServerHTML } from "./pure";

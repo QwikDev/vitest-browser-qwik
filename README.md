@@ -43,7 +43,7 @@ export default defineConfig({
 
 ```tsx
 import { defineConfig } from 'vitest/config'
-import { qwikVite } from '@builder.io/qwik/optimizer'
+import { qwikVite } from '@qwik.dev/core/optimizer'
 
 // optional, run the tests in SSR mode
 import { testSSR } from 'vitest-browser-qwik/ssr-plugin'
@@ -97,7 +97,7 @@ test('renders counter with SSR', async () => {
 ### Hook Testing Example
 
 ```tsx
-import { useSignal } from "@builder.io/qwik";
+import { useSignal } from "@qwik.dev/core";
 import { expect, test } from "vitest";
 import { renderHook } from "vitest-browser-qwik";
 import { useCounter } from "./fixtures/useCounter";

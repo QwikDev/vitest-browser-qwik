@@ -328,7 +328,7 @@ describe("SSR Transform Plugin", () => {
 			const { handler } = await getTransform();
 
 			const code = `
-				import { component$, useSignal } from "@builder.io/qwik";
+				import { component$, useSignal } from "@qwik.dev/core";
 				
 				const LocalComponent = component$(() => {
 					const count = useSignal(0);
@@ -351,7 +351,7 @@ describe("SSR Transform Plugin", () => {
 			const { handler } = await getTransform();
 
 			const code = `
-				import { component$, useSignal } from "@builder.io/qwik";
+				import { component$, useSignal } from "@qwik.dev/core";
 				
 				const CounterComponent = component$<{ initialValue: number }>(({ initialValue }) => {
 					const count = useSignal(initialValue);
@@ -374,7 +374,7 @@ describe("SSR Transform Plugin", () => {
 			const { handler } = await getTransform();
 
 			const code = `
-				import { component$, useSignal, useTask$ } from "@builder.io/qwik";
+				import { component$, useSignal, useTask$ } from "@qwik.dev/core";
 				
 				const TaskComponent = component$(() => {
 					const count = useSignal(0);
@@ -402,7 +402,7 @@ describe("SSR Transform Plugin", () => {
 			const { handler } = await getTransform();
 
 			const code = `
-				import { component$, useSignal } from "@builder.io/qwik";
+				import { component$, useSignal } from "@qwik.dev/core";
 				import { Counter } from "./fixtures/Counter";
 				
 				const LocalComponent = component$(() => {
@@ -428,7 +428,7 @@ describe("SSR Transform Plugin", () => {
 			const { handler } = await getTransform();
 
 			const code = `
-				import { component$, useSignal } from "@builder.io/qwik";
+				import { component$, useSignal } from "@qwik.dev/core";
 				
 				const FirstComponent = component$(() => {
 					return <div>First</div>;
@@ -457,7 +457,7 @@ describe("SSR Transform Plugin", () => {
 			const { handler } = await getTransform();
 
 			const code = `
-				import { component$, useSignal } from "@builder.io/qwik";
+				import { component$, useSignal } from "@qwik.dev/core";
 				
 				const ComplexComponent = component$<{ data: { value: number; name: string } }>(({ data }) => {
 					const count = useSignal(data.value);
@@ -481,7 +481,7 @@ describe("SSR Transform Plugin", () => {
 			const { handler } = await getTransform();
 
 			const code = `
-				import { component$, useSignal } from "@builder.io/qwik";
+				import { component$, useSignal } from "@qwik.dev/core";
 				
 				const UnusedComponent = component$(() => {
 					return <div>Not used</div>;
@@ -557,8 +557,8 @@ describe("SSR Transform Plugin", () => {
 			const code = `
 				import { Counter } from "./fixtures/Counter";
 				
-				test("should render counter", () => {
-					const result = renderSSR(<Counter initialCount={5} />);
+				test("should render counter", async () => {
+					const result = await renderSSR(<Counter initialCount={5} />);
 					expect(result.html).toContain("5");
 				});
 			`;
