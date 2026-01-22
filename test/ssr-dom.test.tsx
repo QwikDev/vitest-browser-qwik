@@ -53,6 +53,7 @@ test("Multiple SSR components in same test", async () => {
 
 test("SSR Counter interactivity test", async () => {
 	const screen = await renderSSR(<Counter initialCount={5} />);
+	console.log(screen.container.innerHTML);
 
 	// Verify initial state
 	await expect.element(screen.getByText("Count is 5")).toBeVisible();
@@ -60,6 +61,7 @@ test("SSR Counter interactivity test", async () => {
 	// Try to click the button
 	const button = screen.getByRole("button");
 	await button.click();
+	console.log("Clicked the button", screen.container.innerHTML);
 
 	// Check if count increased (this will likely fail since there's no hydration)
 	await expect.element(screen.getByText("Count is 6")).toBeVisible();

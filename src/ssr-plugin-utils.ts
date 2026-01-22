@@ -19,6 +19,8 @@ import type {
 } from "@oxc-project/types";
 import { ResolverFactory } from "oxc-resolver";
 import type { BrowserCommandContext } from "vitest/node";
+import type { ViteDevServer } from "vite";
+import type { QwikManifest, SegmentAnalysis } from "@qwik.dev/core/optimizer";
 
 const resolver = new ResolverFactory({
 	extensions: [".tsx", ".ts", ".jsx", ".js"],
@@ -226,12 +228,30 @@ export function hasCommandsImport(node: Node): boolean {
 	);
 }
 
+const getClientModule = async (viteServer: ViteDevServer, moduleId: string) => {
+	const clientEnv = viteServer.environments.client;
+	await clientEnv.fetchModule(moduleId);
+	const resolved = await clientEnv.moduleGraph.resolveUrl(moduleId);
+	if (!resolved) {
+		throw new Error(
+			`Could not resolve module "${moduleId}" in client environment`,
+		);
+	}
+	const module = clientEnv.moduleGraph.getModuleById(
+		resolved[1]!,
+	);
+	console.log('Resolved client module', moduleId, resolved, module);
+	if (!module) {
+		throw new Error(`Module "${moduleId}" not found in client module graph.`);
+	}
+	return module;
+}
 export async function renderComponentToSSR(
 	ctx: BrowserCommandContext,
 	Component: Component,
 	props: Record<string, unknown> = {},
 ): Promise<{ html: string }> {
-	const viteServer = ctx.project.vite;
+	const viteServer = ctx.project.vite as ViteDevServer;
 
 	const qwikModule = await viteServer.ssrLoadModule("@qwik.dev/core");
 	const { jsx } = qwikModule;
@@ -242,17 +262,47 @@ export async function renderComponentToSSR(
 	);
 	const { renderToStream } = serverModule as typeof import("@qwik.dev/core/server");
 
-	let html = "";
+	// Generate the manifest mapping
+	const mapping: QwikManifest['mapping'] = {}
+	// First, transform the input file for client
+	const module = await getClientModule(viteServer, ctx.testPath!);
+	// Now find all the generated segments
+	for (const importedModule of module?.importedModules || []) {
+		const meta = importedModule.info?.meta;
+		if (meta?.segment) {
+			const symbol = (meta.segment as SegmentAnalysis).hash
+			if (symbol) {
+				mapping[symbol] = `/@fs${importedModule.id!}`
+			}
+		}
+	}
+	// Special case for the _run etc segments
+	const handlersModule = await getClientModule(viteServer, '@qwik.dev/core/handlers.mjs');
+	const handlersId = handlersModule!.id!;
+	mapping['_chk'] = handlersId;
+	mapping['_run'] = handlersId;
+	mapping['_task'] = handlersId;
+	mapping['_val'] = handlersId;
+	const qwikManifest = {
+		manifestHash: 'dev',
+		mapping
+	} as QwikManifest;
+
+	//  await Promise.allSettled([...viteServer.moduleGraph.idToModuleMap.keys()].map(id => viteServer.environments.client.fetchModule(id)));
+	console.log(mapping);
+
+	let html = "<script>var _import=(s)=>{console.log('importing', s);return import(s)}</script>";
 
 	await renderToStream(jsxElement, {
+		manifest: qwikManifest,
 		containerTagName: "div",
 		base: "/",
 		stream: {
 			write(chunk: string) {
-				html += chunk;
+				html += chunk.replace(/=import\(/g, '=_import(');
 			},
 		},
 	});
-
+	console.log('FINAL HTML', html);
 	return { html };
 }
