@@ -8,7 +8,7 @@ export default defineConfig({
 		testSSR(),
 		qwikVite({
 			devTools: { clickToSource: false, imageDevTools: false },
-			debug: true,
+			// debug: true,
 		}),
 	],
 	test: {
