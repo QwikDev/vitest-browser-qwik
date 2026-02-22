@@ -276,15 +276,15 @@ export async function renderComponentToSSR(
 			}
 		}
 	}
-	// Special case for the _run etc segments
+	// Dynamically map handler segments from @qwik.dev/core/handlers.mjs
 	const handlersModule = await getClientModule(viteServer, '@qwik.dev/core/handlers.mjs');
 	const handlersId = handlersModule!.id!;
-	mapping['_chk'] = handlersId;
-	mapping['_run'] = handlersId;
-	mapping['_task'] = handlersId;
-	mapping['_val'] = handlersId;
-	mapping['_res'] = handlersId;
-	mapping['_rsc'] = handlersId;
+	const handlersExports = await viteServer.ssrLoadModule('@qwik.dev/core/handlers.mjs');
+	for (const key of Object.keys(handlersExports)) {
+		if (key.startsWith('_')) {
+			mapping[key] = handlersId;
+		}
+	}
 	const qwikManifest = {
 		manifestHash: 'dev',
 		mapping
