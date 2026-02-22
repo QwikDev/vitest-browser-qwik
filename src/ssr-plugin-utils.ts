@@ -1,4 +1,3 @@
-import { dirname, relative, resolve } from "node:path";
 import type {
 	BindingIdentifier,
 	CallExpression,
@@ -18,9 +17,12 @@ import type {
 } from "@oxc-project/types";
 import type { Component } from "@qwik.dev/core";
 import type { QwikManifest, SegmentAnalysis } from "@qwik.dev/core/optimizer";
+import { dirname, relative, resolve } from "node:path";
 import { ResolverFactory } from "oxc-resolver";
 import type { ViteDevServer } from "vite";
 import type { BrowserCommandContext } from "vitest/node";
+
+const DEBUG = false;
 
 const resolver = new ResolverFactory({
 	extensions: [".tsx", ".ts", ".jsx", ".js"],
@@ -239,7 +241,7 @@ const getClientModule = async (viteServer: ViteDevServer, moduleId: string) => {
 		);
 	}
 	const module = clientEnv.moduleGraph.getModuleById(resolvedId);
-	console.log("Resolved client module", moduleId, resolved, module);
+	// console.log("Resolved client module", moduleId, resolved, module);
 	if (!module) {
 		throw new Error(`Module "${moduleId}" not found in client module graph.`);
 	}
@@ -273,26 +275,22 @@ export async function renderComponentToSSR(
 		if (meta?.segment) {
 			const symbol = (meta.segment as SegmentAnalysis).hash;
 			if (symbol && importedModule.id) {
-				mapping[symbol] = `/@fs${importedModule.id}`;
+				mapping[symbol] = importedModule.url;
 			}
 		}
 	}
-	// Dynamically map handler segments from @qwik.dev/core/handlers.mjs
+	// qwik-internal qrl handlers
 	const handlersModule = await getClientModule(
 		viteServer,
 		"@qwik.dev/core/handlers.mjs",
 	);
-	const handlersId = handlersModule.id;
-	if (!handlersId) {
-		throw new Error("Handlers module ID could not be resolved");
+	const handlersUrl = handlersModule.url;
+	if (!handlersUrl) {
+		throw new Error("Handlers module URL could not be resolved");
 	}
-	const handlersExports = await viteServer.ssrLoadModule(
-		"@qwik.dev/core/handlers.mjs",
-	);
-	for (const key of Object.keys(handlersExports)) {
-		if (key.startsWith("_")) {
-			mapping[key] = handlersId;
-		}
+	const handlerNames = Object.keys(serverModule).filter((key) => /^_[a-z]+$/.test(key));
+	for (const key of handlerNames) {
+		mapping[key] = handlersUrl;
 	}
 	const qwikManifest = {
 		manifestHash: "dev",
@@ -300,10 +298,10 @@ export async function renderComponentToSSR(
 	} as QwikManifest;
 
 	//  await Promise.allSettled([...viteServer.moduleGraph.idToModuleMap.keys()].map(id => viteServer.environments.client.fetchModule(id)));
-	console.log(mapping);
+	DEBUG && console.log('mapping', mapping);
 
 	let html =
-		"<script>var _import=(s)=>{console.log('importing', s);return import(s)}</script>";
+		DEBUG ? "<script>var _import=(s)=>{console.log('importing', s);return import(s)}</script>" : "";
 
 	await renderToStream(jsxElement, {
 		manifest: qwikManifest,
@@ -311,10 +309,14 @@ export async function renderComponentToSSR(
 		base: "/",
 		stream: {
 			write(chunk: string) {
-				html += chunk.replace(/=import\(/g, "=_import(");
+				if (DEBUG) {
+					html += chunk.replace(/=import\(/g, "=_import(");
+				} else {
+					html += chunk;
+				}
 			},
 		},
 	});
-	console.log("FINAL HTML", html);
+	DEBUG && console.log("FINAL HTML", html);
 	return { html };
 }
