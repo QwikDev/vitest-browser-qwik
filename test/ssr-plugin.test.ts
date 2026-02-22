@@ -95,7 +95,7 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/aliased.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSR");
+			expect(result?.code).toContain("commands.renderSSR");
 		});
 
 		it("should detect variable aliases", async () => {
@@ -113,7 +113,7 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/variable-alias.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSR");
+			expect(result?.code).toContain("commands.renderSSR");
 		});
 
 		it("should detect default imports with renderSSR-like names", async () => {
@@ -224,10 +224,10 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/transform.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSR(");
-			expect(result!.code).toContain('"Counter"');
-			expect(result!.code).toContain('"initialCount": 5');
-			expect(result!.code).toContain(
+			expect(result?.code).toContain("commands.renderSSR(");
+			expect(result?.code).toContain('"Counter"');
+			expect(result?.code).toContain('"initialCount": 5');
+			expect(result?.code).toContain(
 				'import { commands } from "vitest/browser"',
 			);
 		});
@@ -245,7 +245,7 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/string-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"title": "Hello"');
+			expect(result?.code).toContain('"title": "Hello"');
 		});
 
 		it("should handle multiple renderSSR calls", async () => {
@@ -263,9 +263,9 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/multiple.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"Counter"');
-			expect(result!.code).toContain('"initialCount": 1');
-			expect(result!.code).toContain('"HelloWorld"');
+			expect(result?.code).toContain('"Counter"');
+			expect(result?.code).toContain('"initialCount": 1');
+			expect(result?.code).toContain('"HelloWorld"');
 		});
 
 		it("should not add commands import if already present", async () => {
@@ -282,7 +282,7 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/existing-commands.test.tsx");
 			expect(result).not.toBeNull();
-			const importMatches = result!.code.match(
+			const importMatches = result?.code.match(
 				/import.*commands.*from.*vitest\/browser/g,
 			);
 			expect(importMatches).toHaveLength(1);
@@ -301,8 +301,8 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/absolute-import.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("@/components/MyComponent.tsx");
-			expect(result!.code).toContain('"MyComponent"');
+			expect(result?.code).toContain("@/components/MyComponent.tsx");
+			expect(result?.code).toContain('"MyComponent"');
 		});
 
 		it("should preserve file extensions when present", async () => {
@@ -318,8 +318,8 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/with-extension.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("MyComponent.tsx");
-			expect(result!.code).toContain('"MyComponent"');
+			expect(result?.code).toContain("MyComponent.tsx");
+			expect(result?.code).toContain('"MyComponent"');
 		});
 	});
 
@@ -342,9 +342,9 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/local-component.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSRLocal");
-			expect(result!.code).toContain('"LocalComponent"');
-			expect(result!.code).toContain("const LocalComponent = component$");
+			expect(result?.code).toContain("commands.renderSSRLocal");
+			expect(result?.code).toContain('"LocalComponent"');
+			expect(result?.code).toContain("const LocalComponent = component$");
 		});
 
 		it("should handle local components with props", async () => {
@@ -365,9 +365,9 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/local-with-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSRLocal");
-			expect(result!.code).toContain('"CounterComponent"');
-			expect(result!.code).toContain('"initialValue": 5');
+			expect(result?.code).toContain("commands.renderSSRLocal");
+			expect(result?.code).toContain('"CounterComponent"');
+			expect(result?.code).toContain('"initialValue": 5');
 		});
 
 		it("should handle local components with useTask$", async () => {
@@ -393,9 +393,9 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/local-with-task.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSRLocal");
-			expect(result!.code).toContain('"TaskComponent"');
-			expect(result!.code).toContain("useTask$");
+			expect(result?.code).toContain("commands.renderSSRLocal");
+			expect(result?.code).toContain('"TaskComponent"');
+			expect(result?.code).toContain("useTask$");
 		});
 
 		it("should handle mixed local and imported components", async () => {
@@ -418,10 +418,10 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/mixed-components.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSR(");
-			expect(result!.code).toContain("commands.renderSSRLocal(");
-			expect(result!.code).toContain('"Counter"');
-			expect(result!.code).toContain('"LocalComponent"');
+			expect(result?.code).toContain("commands.renderSSR(");
+			expect(result?.code).toContain("commands.renderSSRLocal(");
+			expect(result?.code).toContain('"Counter"');
+			expect(result?.code).toContain('"LocalComponent"');
 		});
 
 		it("should handle multiple local components", async () => {
@@ -447,9 +447,9 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/multiple-local.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"FirstComponent"');
-			expect(result!.code).toContain('"SecondComponent"');
-			const localCalls = result!.code.match(/commands\.renderSSRLocal/g);
+			expect(result?.code).toContain('"FirstComponent"');
+			expect(result?.code).toContain('"SecondComponent"');
+			const localCalls = result?.code.match(/commands\.renderSSRLocal/g);
 			expect(localCalls).toHaveLength(2);
 		});
 
@@ -472,9 +472,9 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/complex-local.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSRLocal");
-			expect(result!.code).toContain('"ComplexComponent"');
-			expect(result!.code).toContain('"data": testData');
+			expect(result?.code).toContain("commands.renderSSRLocal");
+			expect(result?.code).toContain('"ComplexComponent"');
+			expect(result?.code).toContain('"data": testData');
 		});
 
 		it("should not transform local components without renderSSR calls", async () => {
@@ -525,7 +525,7 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/complex-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("Counter");
+			expect(result?.code).toContain("Counter");
 		});
 
 		it("should handle nested JSX elements", async () => {
@@ -546,7 +546,7 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/nested-jsx.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("Wrapper");
+			expect(result?.code).toContain("Wrapper");
 		});
 	});
 
@@ -566,10 +566,10 @@ describe("SSR Transform Plugin", () => {
 			const result = await handler(code, "test/counter.test.tsx");
 
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("commands.renderSSR");
-			expect(result!.code).toContain("Counter");
-			expect(result!.code).toContain('"initialCount": 5');
-			expect(result!.code).toContain("import { commands }");
+			expect(result?.code).toContain("commands.renderSSR");
+			expect(result?.code).toContain("Counter");
+			expect(result?.code).toContain('"initialCount": 5');
+			expect(result?.code).toContain("import { commands }");
 		});
 	});
 
@@ -588,8 +588,8 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/array-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"list": [1, 2, 3]');
-			expect(result!.code).toContain('"items": items');
+			expect(result?.code).toContain('"list": [1, 2, 3]');
+			expect(result?.code).toContain('"items": items');
 		});
 
 		it("should handle object expressions", async () => {
@@ -606,8 +606,8 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/object-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"config": { theme: "dark", size: 10 }');
-			expect(result!.code).toContain('"user": user');
+			expect(result?.code).toContain('"config": { theme: "dark", size: 10 }');
+			expect(result?.code).toContain('"user": user');
 		});
 
 		it("should handle variable references", async () => {
@@ -625,8 +625,8 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/variable-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"count": count');
-			expect(result!.code).toContain('"visible": isVisible');
+			expect(result?.code).toContain('"count": count');
+			expect(result?.code).toContain('"visible": isVisible');
 		});
 
 		it("should handle function calls", async () => {
@@ -642,8 +642,8 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/function-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"value": getValue()');
-			expect(result!.code).toContain('"timestamp": Date.now()');
+			expect(result?.code).toContain('"value": getValue()');
+			expect(result?.code).toContain('"timestamp": Date.now()');
 		});
 
 		it("should handle complex expressions", async () => {
@@ -665,12 +665,12 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/complex-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"computed": base * 2 + 1');
-			expect(result!.code).toContain(
+			expect(result?.code).toContain('"computed": base * 2 + 1');
+			expect(result?.code).toContain(
 				'"conditional": base > 5 ? "high" : "low"',
 			);
-			expect(result!.code).toContain('"member": obj.property');
-			expect(result!.code).toContain('"template": `value: $' + "{base}`");
+			expect(result?.code).toContain('"member": obj.property');
+			expect(result?.code).toContain('"template": `value: $' + "{base}`");
 		});
 
 		it("should handle spread syntax", async () => {
@@ -687,7 +687,7 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/spread-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain("MyComponent");
+			expect(result?.code).toContain("MyComponent");
 		});
 
 		it("should handle mixed prop types", async () => {
@@ -710,11 +710,11 @@ describe("SSR Transform Plugin", () => {
 
 			const result = await handler(code, "/test/mixed-props.test.tsx");
 			expect(result).not.toBeNull();
-			expect(result!.code).toContain('"title": "Hello World"');
-			expect(result!.code).toContain('"count": 42');
-			expect(result!.code).toContain('"items": items');
-			expect(result!.code).toContain('"config": { nested: { value: true } }');
-			expect(result!.code).toContain('"handler": () => console.log("click")');
+			expect(result?.code).toContain('"title": "Hello World"');
+			expect(result?.code).toContain('"count": 42');
+			expect(result?.code).toContain('"items": items');
+			expect(result?.code).toContain('"config": { nested: { value: true } }');
+			expect(result?.code).toContain('"handler": () => console.log("click")');
 		});
 	});
 });

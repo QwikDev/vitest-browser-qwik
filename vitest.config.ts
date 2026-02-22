@@ -4,7 +4,13 @@ import { defineConfig } from "vitest/config";
 import { testSSR } from "./src/ssr-plugin";
 
 export default defineConfig({
-	plugins: [testSSR(), qwikVite({devTools: {clickToSource: false, imageDevTools: false}, debug:true})],
+	plugins: [
+		testSSR(),
+		qwikVite({
+			devTools: { clickToSource: false, imageDevTools: false },
+			debug: true,
+		}),
+	],
 	test: {
 		testTimeout: 2000,
 		browser: {

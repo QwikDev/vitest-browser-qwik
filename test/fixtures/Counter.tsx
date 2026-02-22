@@ -22,6 +22,7 @@ export const Counter = component$<{ initialCount: number }>(
 		return (
 			<>
 				<div>Count is {count.value}</div>
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Intentional - testing script execution in SSR */}
 				<script dangerouslySetInnerHTML="console.error('Script executed on the client side');" />
 				<button type="button" onClick$={() => count.value++}>
 					Increment

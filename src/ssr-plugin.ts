@@ -51,11 +51,16 @@ function isBrowserOnlySource(source: string | undefined): boolean {
 	);
 }
 
-function referencesStrippedId(node: Node | null | undefined, strippedIds: Set<string>): boolean {
+function referencesStrippedId(
+	node: Node | null | undefined,
+	strippedIds: Set<string>,
+): boolean {
 	if (!node || typeof node !== "object") return false;
 	if (node.type === "Identifier") return strippedIds.has(node.name);
-	if (node.type === "MemberExpression") return referencesStrippedId(node.object as Node, strippedIds);
-	if (isCallExpression(node)) return referencesStrippedId(node.callee as Node, strippedIds);
+	if (node.type === "MemberExpression")
+		return referencesStrippedId(node.object as Node, strippedIds);
+	if (isCallExpression(node))
+		return referencesStrippedId(node.callee as Node, strippedIds);
 	return false;
 }
 
@@ -111,7 +116,10 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 		const strippedIds = new Set<string>();
 
 		function cleanTestFile(node: Node): undefined {
-			if (isImportDeclaration(node) && isBrowserOnlySource(node.source?.value)) {
+			if (
+				isImportDeclaration(node) &&
+				isBrowserOnlySource(node.source?.value)
+			) {
 				for (const spec of node.specifiers || []) {
 					if (spec.local?.name) strippedIds.add(spec.local.name);
 				}
@@ -190,7 +198,10 @@ export function testSSR(): Plugin {
 
 		config(config) {
 			if (config.define) {
-				userDefines = { ...userDefines, ...config.define as Record<string, string> };
+				userDefines = {
+					...userDefines,
+					...(config.define as Record<string, string>),
+				};
 			}
 		},
 
@@ -371,7 +382,8 @@ export function testSSR(): Plugin {
 			}
 			for (const [key, value] of Object.entries(config.env)) {
 				if (config.define) {
-					config.define[`__vite_ssr_import_meta__.env.${key}`] = JSON.stringify(value);
+					config.define[`__vite_ssr_import_meta__.env.${key}`] =
+						JSON.stringify(value);
 				}
 			}
 
