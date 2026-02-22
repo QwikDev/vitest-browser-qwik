@@ -2,6 +2,8 @@
 
 A modern testing setup demonstrating browser-based testing for Qwik components using Vitest. This project showcases how to effectively test Qwik components with both Client-Side Rendering (CSR) and Server-Side Rendering (SSR), making it perfect for testing complex UI behaviors across environments.
 
+> This project uses Qwik v2 to render components, if you want to use v1, please downgrade to vitest-browser-qwik@0.1.0.
+
 ## Getting Started
 
 ```bash
