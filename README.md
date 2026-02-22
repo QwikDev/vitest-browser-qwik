@@ -164,9 +164,7 @@ but Vite 6.x should work as well.
 
 ## Limitations
 
-- For `renderSSR` you must always import the component from another file, local components are not supported. This is because this would require importing the vitest context, or moving local components into separate files dynamically, which involves a lot of unwanted complexity.
-
-- In the vitest config there is a hardcoded value for whether or not browser mode is headless. This is because when relying on environment variables, it seems there is an additional cost in the vitest core side that introduces potential race conditions.
+- For `renderSSR`, if you have a component declared locally in the test file, and you import something in the browser test file that is browser only other than vitest, it will not be available in the SSR context. Make sure to put this in a separate file.
 
 ## Contributing
 
