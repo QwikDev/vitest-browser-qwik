@@ -9,7 +9,7 @@
 # We don't need to have the latest playwright all the time so not having to download
 # all the browsers on every version bump is a good thing.
 {
-  inputs = { nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05"; };
+  inputs = { nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11"; };
 
   outputs = { self, nixpkgs }:
     let

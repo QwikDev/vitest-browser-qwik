@@ -5,8 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@playwright/test': 1.52.0
-  playwright: 1.52.0
+  '@playwright/test': 1.56.1
+  playwright: 1.56.1
 
 importers:
 
@@ -32,8 +32,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       '@playwright/test':
-        specifier: 1.52.0
-        version: 1.52.0
+        specifier: 1.56.1
+        version: 1.56.1
       '@qwik.dev/core':
         specifier: '*'
         version: 2.0.0-beta.24(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
@@ -42,7 +42,7 @@ importers:
         version: 22.15.32
       '@vitest/browser-playwright':
         specifier: ^4.0.18
-        version: 4.0.18(playwright@1.52.0)(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
+        version: 4.0.18(playwright@1.56.1)(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
       bumpp:
         specifier: ^10.1.0
         version: 10.2.0
@@ -506,8 +506,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@playwright/test@1.52.0':
-    resolution: {integrity: sha512-uh6W7sb55hl7D6vsAeA+V2p5JnlAqzhqFyF0VcJkKZXkgnFcVG9PziERRHQfPLfNGx1C292a4JqbWzhR8L4R1g==}
+  '@playwright/test@1.56.1':
+    resolution: {integrity: sha512-vSMYtL/zOcFpvJCW71Q/OEGQb7KYBPAdKh35WNSkaZA75JlAO8ED8UN6GUNTm3drWomcbcqRPFqQbLae8yBTdg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -869,7 +869,7 @@ packages:
   '@vitest/browser-playwright@4.0.18':
     resolution: {integrity: sha512-gfajTHVCiwpxRj1qh0Sh/5bbGLG4F/ZH/V9xvFVoFddpITfMta9YGow0W6ZpTTORv2vdJuz9TnrNSmjKvpOf4g==}
     peerDependencies:
-      playwright: 1.52.0
+      playwright: 1.56.1
       vitest: 4.0.18
 
   '@vitest/browser@4.0.18':
@@ -1185,13 +1185,13 @@ packages:
   pkg-types@2.1.0:
     resolution: {integrity: sha512-wmJwA+8ihJixSoHKxZJRBQG1oY8Yr9pGLzRmSsNms0iNWyHHAlZCa7mmKiFR10YPZuz/2k169JiS/inOjBCZ2A==}
 
-  playwright-core@1.52.0:
-    resolution: {integrity: sha512-l2osTgLXSMeuLZOML9qYODUQoPPnUsKsb5/P6LJ2e6uPKXUdPK5WYhN4z03G+YNbWmGDY4YENauNu4ZKczreHg==}
+  playwright-core@1.56.1:
+    resolution: {integrity: sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.52.0:
-    resolution: {integrity: sha512-JAwMNMBlxJ2oD1kce4KPtMkDeKGHQstdpFPcPH3maElAXon/QZeTvtsfXmTMRyO9TslfoYOXkSsvao2nE1ilTw==}
+  playwright@1.56.1:
+    resolution: {integrity: sha512-aFi5B0WovBHTEvpM3DzXTUaeN6eN0qWnTkKx4NQaH4Wvcmc153PdaY2UBdSYKaGYw+UyWXSVyxDUg5DoPEttjw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -1764,9 +1764,9 @@ snapshots:
   '@oxc-resolver/binding-win32-x64-msvc@11.11.1':
     optional: true
 
-  '@playwright/test@1.52.0':
+  '@playwright/test@1.56.1':
     dependencies:
-      playwright: 1.52.0
+      playwright: 1.56.1
 
   '@polka/url@1.0.0-next.29': {}
 
@@ -1992,11 +1992,11 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@vitest/browser-playwright@4.0.18(playwright@1.52.0)(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)':
+  '@vitest/browser-playwright@4.0.18(playwright@1.56.1)(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)':
     dependencies:
       '@vitest/browser': 4.0.18(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
       '@vitest/mocker': 4.0.18(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))
-      playwright: 1.52.0
+      playwright: 1.56.1
       tinyrainbow: 3.0.3
       vitest: 4.0.18(@types/node@22.15.32)(@vitest/browser-playwright@4.0.18)(happy-dom@17.6.3)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0)
     transitivePeerDependencies:
@@ -2364,11 +2364,11 @@ snapshots:
       exsolve: 1.0.6
       pathe: 2.0.3
 
-  playwright-core@1.52.0: {}
+  playwright-core@1.56.1: {}
 
-  playwright@1.52.0:
+  playwright@1.56.1:
     dependencies:
-      playwright-core: 1.52.0
+      playwright-core: 1.56.1
     optionalDependencies:
       fsevents: 2.3.2
 
@@ -2634,7 +2634,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.15.32
-      '@vitest/browser-playwright': 4.0.18(playwright@1.52.0)(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
+      '@vitest/browser-playwright': 4.0.18(playwright@1.56.1)(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
       happy-dom: 17.6.3
     transitivePeerDependencies:
       - jiti
