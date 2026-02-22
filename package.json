@@ -57,9 +57,9 @@
 	},
 	"dependencies": {
 		"@oxc-project/types": "^0.95.0",
-		"magic-string": "^0.30.17",
+		"magic-string": "^0.30.21",
 		"oxc-parser": "^0.95.0",
-		"oxc-resolver": "^11.11.1"
+		"oxc-resolver": "^11.16.2"
 	},
 	"peerDependencies": {
 		"@builder.io/qwik": ">=1.14.1",
@@ -68,16 +68,16 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.0.0",
-		"@playwright/test": "see flake.nix",
-		"@builder.io/qwik": "^1.17",
-		"@types/node": "^22.15.17",
-		"@vitest/browser-playwright": "^4.0.0",
-		"magic-regexp": "^0.10.0",
-		"bumpp": "^10.1.0",
+		"@builder.io/qwik": "^1.18.0",
+		"@playwright/test": "1.52.0",
+		"@types/node": "^22.19.3",
+		"@vitest/browser-playwright": "^4.0.18",
+		"bumpp": "^10.3.2",
 		"ignore": "^7.0.5",
-		"tsdown": "^0.15.9",
-		"typescript": "^5.8.3",
-		"vitest": "^4.0.0"
+		"magic-regexp": "^0.10.0",
+		"tsdown": "^0.15.12",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.18"
 	},
 	"pnpm": {
 		"overrides": {
