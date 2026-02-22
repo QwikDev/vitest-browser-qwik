@@ -40,6 +40,27 @@ type LocalComponentFormat = BrowserCommand<
 	]
 >;
 
+let userDefines: Record<string, string> = {};
+
+function applyDefinesForSSR(viteServer: { config: { define?: Record<string, string>; env: Record<string, string> } }) {
+	if (!viteServer.config.define) {
+		viteServer.config.define = {};
+	}
+	for (const [key, value] of Object.entries(viteServer.config.env)) {
+		viteServer.config.define[`__vite_ssr_import_meta__.env.${key}`] =
+			JSON.stringify(value);
+	}
+	const allDefines = { ...userDefines, ...viteServer.config.define };
+	for (const [key, value] of Object.entries(allDefines)) {
+		if (key.startsWith("__vite_ssr_import_meta__") || key.includes(".")) continue;
+		try {
+			(globalThis as Record<string, unknown>)[key] = JSON.parse(String(value));
+		} catch {
+			(globalThis as Record<string, unknown>)[key] = value;
+		}
+	}
+}
+
 const renderSSRCommand: ComponentFormat = async (
 	ctx,
 	componentPath: string,
@@ -50,12 +71,7 @@ const renderSSRCommand: ComponentFormat = async (
 	const absoluteComponentPath = resolve(projectRoot, componentPath);
 	const viteServer = ctx.project.vite;
 
-	// it does not replace env vars in the test file, so we need to do it manually
-	if (!viteServer.config.define) return;
-	for (const [key, value] of Object.entries(viteServer.config.env)) {
-		viteServer.config.define[`__vite_ssr_import_meta__.env.${key}`] =
-			JSON.stringify(value);
-	}
+	applyDefinesForSSR(viteServer);
 
 	const componentModule = await viteServer.ssrLoadModule(absoluteComponentPath);
 	const Component = componentModule[componentName];
@@ -78,12 +94,7 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 ) => {
 	const viteServer = ctx.project.vite;
 
-	// it does not replace env vars in the test file, so we need to do it manually
-	if (!viteServer.config.define) return;
-	for (const [key, value] of Object.entries(viteServer.config.env)) {
-		viteServer.config.define[`__vite_ssr_import_meta__.env.${key}`] =
-			JSON.stringify(value);
-	}
+	applyDefinesForSSR(viteServer);
 
 	const { readFileSync, writeFileSync, unlinkSync } = await import("node:fs");
 	const { dirname, join } = await import("node:path");
@@ -97,12 +108,38 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 		const originalContent = readFileSync(testFilePath, "utf8");
 		const ast = parseSync(testFilePath, originalContent);
 		const s = new MagicString(originalContent);
+		const strippedIdentifiers = new Set<string>();
+
+		function isBrowserOnlySource(source: string | undefined): boolean {
+			if (!source) return false;
+			return (
+				source === "vitest" ||
+				source.startsWith("vitest/") ||
+				source === "vitest-browser-qwik" ||
+				source.startsWith("vitest-browser-qwik/") ||
+				source.includes("@vitest/") ||
+				source === "axe-core"
+			);
+		}
+
+		function referencesStrippedId(node: Node | null | undefined): boolean {
+			if (!node || typeof node !== "object") return false;
+			if (node.type === "Identifier") return strippedIdentifiers.has((node as { name: string }).name);
+			if (node.type === "MemberExpression") return referencesStrippedId((node as { object: Node }).object);
+			if (node.type === "CallExpression") return referencesStrippedId((node as { callee: Node }).callee);
+			return false;
+		}
 
 		function cleanTestFile(node: Node): undefined {
 			if (isImportDeclaration(node)) {
 				const source = node.source?.value;
-				if (source === "vitest" || source?.includes("@vitest/")) {
+				if (isBrowserOnlySource(source)) {
+					for (const spec of node.specifiers || []) {
+						const local = (spec as { local?: { name?: string } }).local;
+						if (local?.name) strippedIdentifiers.add(local.name);
+					}
 					s.remove(node.start, node.end);
+					return undefined;
 				}
 			}
 
@@ -119,7 +156,22 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 						calleeName === "it"
 					) {
 						s.remove(node.start, node.end);
+						return undefined;
 					}
+				}
+			}
+
+			if (node.type === "VariableDeclaration") {
+				const decls = (node as { declarations: Array<{ id: { type: string; name?: string }; init: Node | null }> }).declarations;
+				const allReference = decls.every((d) => referencesStrippedId(d.init));
+				if (allReference) {
+					for (const d of decls) {
+						if (d.id.type === "Identifier" && d.id.name) {
+							strippedIdentifiers.add(d.id.name);
+						}
+					}
+					s.remove(node.start, node.end);
+					return undefined;
 				}
 			}
 
@@ -160,6 +212,12 @@ export function testSSR(): Plugin {
 	return {
 		name: "vitest:ssr-transform",
 		enforce: "pre",
+
+		config(config) {
+			if (config.define) {
+				userDefines = { ...userDefines, ...config.define as Record<string, string> };
+			}
+		},
 
 		transform: {
 			filter: {
