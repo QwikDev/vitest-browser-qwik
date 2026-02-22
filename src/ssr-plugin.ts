@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { Node } from "@oxc-project/types";
+import type { Node, VariableDeclaration } from "@oxc-project/types";
 import { anyOf, createRegExp, exactly, maybe } from "magic-regexp";
 import MagicString from "magic-string";
 import { parseSync } from "oxc-parser";
@@ -39,6 +39,29 @@ type LocalComponentFormat = BrowserCommand<
 		props?: Record<string, unknown>,
 	]
 >;
+
+function isBrowserOnlySource(source: string | undefined): boolean {
+	if (!source) return false;
+	return (
+		source === "vitest" ||
+		source.startsWith("vitest/") ||
+		source === "vitest-browser-qwik" ||
+		source.startsWith("vitest-browser-qwik/") ||
+		source.includes("@vitest/")
+	);
+}
+
+function referencesStrippedId(node: Node | null | undefined, strippedIds: Set<string>): boolean {
+	if (!node || typeof node !== "object") return false;
+	if (node.type === "Identifier") return strippedIds.has(node.name);
+	if (node.type === "MemberExpression") return referencesStrippedId(node.object as Node, strippedIds);
+	if (isCallExpression(node)) return referencesStrippedId(node.callee as Node, strippedIds);
+	return false;
+}
+
+function isVariableDeclaration(node: Node): node is VariableDeclaration {
+	return node.type === "VariableDeclaration";
+}
 
 let userDefines: Record<string, string> = {};
 
@@ -108,39 +131,15 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 		const originalContent = readFileSync(testFilePath, "utf8");
 		const ast = parseSync(testFilePath, originalContent);
 		const s = new MagicString(originalContent);
-		const strippedIdentifiers = new Set<string>();
-
-		function isBrowserOnlySource(source: string | undefined): boolean {
-			if (!source) return false;
-			return (
-				source === "vitest" ||
-				source.startsWith("vitest/") ||
-				source === "vitest-browser-qwik" ||
-				source.startsWith("vitest-browser-qwik/") ||
-				source.includes("@vitest/") ||
-				source === "axe-core"
-			);
-		}
-
-		function referencesStrippedId(node: Node | null | undefined): boolean {
-			if (!node || typeof node !== "object") return false;
-			if (node.type === "Identifier") return strippedIdentifiers.has((node as { name: string }).name);
-			if (node.type === "MemberExpression") return referencesStrippedId((node as { object: Node }).object);
-			if (node.type === "CallExpression") return referencesStrippedId((node as { callee: Node }).callee);
-			return false;
-		}
+		const strippedIds = new Set<string>();
 
 		function cleanTestFile(node: Node): undefined {
-			if (isImportDeclaration(node)) {
-				const source = node.source?.value;
-				if (isBrowserOnlySource(source)) {
-					for (const spec of node.specifiers || []) {
-						const local = (spec as { local?: { name?: string } }).local;
-						if (local?.name) strippedIdentifiers.add(local.name);
-					}
-					s.remove(node.start, node.end);
-					return undefined;
+			if (isImportDeclaration(node) && isBrowserOnlySource(node.source?.value)) {
+				for (const spec of node.specifiers || []) {
+					if (spec.local?.name) strippedIds.add(spec.local.name);
 				}
+				s.remove(node.start, node.end);
+				return undefined;
 			}
 
 			if (
@@ -161,14 +160,13 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 				}
 			}
 
-			if (node.type === "VariableDeclaration") {
-				const decls = (node as { declarations: Array<{ id: { type: string; name?: string }; init: Node | null }> }).declarations;
-				const allReference = decls.every((d) => referencesStrippedId(d.init));
+			if (isVariableDeclaration(node)) {
+				const allReference = node.declarations.every((d) =>
+					referencesStrippedId(d.init as Node | null, strippedIds),
+				);
 				if (allReference) {
-					for (const d of decls) {
-						if (d.id.type === "Identifier" && d.id.name) {
-							strippedIdentifiers.add(d.id.name);
-						}
+					for (const d of node.declarations) {
+						if (d.id.type === "Identifier") strippedIds.add(d.id.name);
 					}
 					s.remove(node.start, node.end);
 					return undefined;
