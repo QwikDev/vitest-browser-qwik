@@ -65,25 +65,6 @@ function isVariableDeclaration(node: Node): node is VariableDeclaration {
 
 let userDefines: Record<string, string> = {};
 
-function applyDefinesForSSR(viteServer: { config: { define?: Record<string, string>; env: Record<string, string> } }) {
-	if (!viteServer.config.define) {
-		viteServer.config.define = {};
-	}
-	for (const [key, value] of Object.entries(viteServer.config.env)) {
-		viteServer.config.define[`__vite_ssr_import_meta__.env.${key}`] =
-			JSON.stringify(value);
-	}
-	const allDefines = { ...userDefines, ...viteServer.config.define };
-	for (const [key, value] of Object.entries(allDefines)) {
-		if (key.startsWith("__vite_ssr_import_meta__") || key.includes(".")) continue;
-		try {
-			(globalThis as Record<string, unknown>)[key] = JSON.parse(String(value));
-		} catch {
-			(globalThis as Record<string, unknown>)[key] = value;
-		}
-	}
-}
-
 const renderSSRCommand: ComponentFormat = async (
 	ctx,
 	componentPath: string,
@@ -93,8 +74,6 @@ const renderSSRCommand: ComponentFormat = async (
 	const projectRoot = process.cwd();
 	const absoluteComponentPath = resolve(projectRoot, componentPath);
 	const viteServer = ctx.project.vite;
-
-	applyDefinesForSSR(viteServer);
 
 	const componentModule = await viteServer.ssrLoadModule(absoluteComponentPath);
 	const Component = componentModule[componentName];
@@ -116,8 +95,6 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 	props: Record<string, unknown> = {},
 ) => {
 	const viteServer = ctx.project.vite;
-
-	applyDefinesForSSR(viteServer);
 
 	const { readFileSync, writeFileSync, unlinkSync } = await import("node:fs");
 	const { dirname, join } = await import("node:path");
@@ -384,6 +361,20 @@ export function testSSR(): Plugin {
 			},
 		},
 		configResolved(config) {
+			if (!config.define) {
+				(config as { define: Record<string, string> }).define = {};
+			}
+			for (const [key, value] of Object.entries(userDefines)) {
+				if (config.define) {
+					config.define[key] = value;
+				}
+			}
+			for (const [key, value] of Object.entries(config.env)) {
+				if (config.define) {
+					config.define[`__vite_ssr_import_meta__.env.${key}`] = JSON.stringify(value);
+				}
+			}
+
 			if (config.test?.browser?.enabled) {
 				config.test.browser.commands = {
 					...config.test.browser.commands,
