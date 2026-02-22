@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { Node } from "@oxc-project/types";
+import type { Node, VariableDeclaration } from "@oxc-project/types";
 import { anyOf, createRegExp, exactly, maybe } from "magic-regexp";
 import MagicString from "magic-string";
 import { parseSync } from "oxc-parser";
@@ -40,6 +40,36 @@ type LocalComponentFormat = BrowserCommand<
 	]
 >;
 
+function isBrowserOnlySource(source: string | undefined): boolean {
+	if (!source) return false;
+	return (
+		source === "vitest" ||
+		source.startsWith("vitest/") ||
+		source === "vitest-browser-qwik" ||
+		source.startsWith("vitest-browser-qwik/") ||
+		source.includes("@vitest/")
+	);
+}
+
+function referencesStrippedId(
+	node: Node | null | undefined,
+	strippedIds: Set<string>,
+): boolean {
+	if (!node || typeof node !== "object") return false;
+	if (node.type === "Identifier") return strippedIds.has(node.name);
+	if (node.type === "MemberExpression")
+		return referencesStrippedId(node.object as Node, strippedIds);
+	if (isCallExpression(node))
+		return referencesStrippedId(node.callee as Node, strippedIds);
+	return false;
+}
+
+function isVariableDeclaration(node: Node): node is VariableDeclaration {
+	return node.type === "VariableDeclaration";
+}
+
+let userDefines: Record<string, string> = {};
+
 const renderSSRCommand: ComponentFormat = async (
 	ctx,
 	componentPath: string,
@@ -49,13 +79,6 @@ const renderSSRCommand: ComponentFormat = async (
 	const projectRoot = process.cwd();
 	const absoluteComponentPath = resolve(projectRoot, componentPath);
 	const viteServer = ctx.project.vite;
-
-	// it does not replace env vars in the test file, so we need to do it manually
-	if (!viteServer.config.define) return;
-	for (const [key, value] of Object.entries(viteServer.config.env)) {
-		viteServer.config.define[`__vite_ssr_import_meta__.env.${key}`] =
-			JSON.stringify(value);
-	}
 
 	const componentModule = await viteServer.ssrLoadModule(absoluteComponentPath);
 	const Component = componentModule[componentName];
@@ -78,13 +101,6 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 ) => {
 	const viteServer = ctx.project.vite;
 
-	// it does not replace env vars in the test file, so we need to do it manually
-	if (!viteServer.config.define) return;
-	for (const [key, value] of Object.entries(viteServer.config.env)) {
-		viteServer.config.define[`__vite_ssr_import_meta__.env.${key}`] =
-			JSON.stringify(value);
-	}
-
 	const { readFileSync, writeFileSync, unlinkSync } = await import("node:fs");
 	const { dirname, join } = await import("node:path");
 
@@ -97,13 +113,18 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 		const originalContent = readFileSync(testFilePath, "utf8");
 		const ast = parseSync(testFilePath, originalContent);
 		const s = new MagicString(originalContent);
+		const strippedIds = new Set<string>();
 
 		function cleanTestFile(node: Node): undefined {
-			if (isImportDeclaration(node)) {
-				const source = node.source?.value;
-				if (source === "vitest" || source?.includes("@vitest/")) {
-					s.remove(node.start, node.end);
+			if (
+				isImportDeclaration(node) &&
+				isBrowserOnlySource(node.source?.value)
+			) {
+				for (const spec of node.specifiers || []) {
+					if (spec.local?.name) strippedIds.add(spec.local.name);
 				}
+				s.remove(node.start, node.end);
+				return undefined;
 			}
 
 			if (
@@ -119,7 +140,21 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 						calleeName === "it"
 					) {
 						s.remove(node.start, node.end);
+						return undefined;
 					}
+				}
+			}
+
+			if (isVariableDeclaration(node)) {
+				const allReference = node.declarations.every((d) =>
+					referencesStrippedId(d.init as Node | null, strippedIds),
+				);
+				if (allReference) {
+					for (const d of node.declarations) {
+						if (d.id.type === "Identifier") strippedIds.add(d.id.name);
+					}
+					s.remove(node.start, node.end);
+					return undefined;
 				}
 			}
 
@@ -160,6 +195,15 @@ export function testSSR(): Plugin {
 	return {
 		name: "vitest:ssr-transform",
 		enforce: "pre",
+
+		config(config) {
+			if (config.define) {
+				userDefines = {
+					...userDefines,
+					...(config.define as Record<string, string>),
+				};
+			}
+		},
 
 		transform: {
 			filter: {
@@ -328,6 +372,21 @@ export function testSSR(): Plugin {
 			},
 		},
 		configResolved(config) {
+			if (!config.define) {
+				(config as { define: Record<string, string> }).define = {};
+			}
+			for (const [key, value] of Object.entries(userDefines)) {
+				if (config.define) {
+					config.define[key] = value;
+				}
+			}
+			for (const [key, value] of Object.entries(config.env)) {
+				if (config.define) {
+					config.define[`__vite_ssr_import_meta__.env.${key}`] =
+						JSON.stringify(value);
+				}
+			}
+
 			if (config.test?.browser?.enabled) {
 				config.test.browser.commands = {
 					...config.test.browser.commands,

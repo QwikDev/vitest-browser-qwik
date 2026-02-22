@@ -104,7 +104,7 @@ function setHTMLWithScripts(container: HTMLElement, html: string) {
 		const newScript = document.createElement("script");
 
 		// Copy attributes (like src, type, etc.)
-		for (const attr of oldScript.attributes as any as Attr[]) {
+		for (const attr of Array.from(oldScript.attributes)) {
 			newScript.setAttribute(attr.name, attr.value);
 		}
 
