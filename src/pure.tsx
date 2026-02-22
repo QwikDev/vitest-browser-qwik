@@ -149,7 +149,7 @@ export async function renderHook<Result>(
 		return <div data-testid="hook-result"></div>;
 	});
 
-	const screen = render(<TestHookComponent />);
+	const screen = await render(<TestHookComponent />);
 
 	// Wait for the component to actually render
 	await renderPromise;
