@@ -283,6 +283,8 @@ export async function renderComponentToSSR(
 	mapping['_run'] = handlersId;
 	mapping['_task'] = handlersId;
 	mapping['_val'] = handlersId;
+	mapping['_res'] = handlersId;
+	mapping['_rsc'] = handlersId;
 	const qwikManifest = {
 		manifestHash: 'dev',
 		mapping

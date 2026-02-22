@@ -64,20 +64,20 @@
 	"peerDependencies": {
 		"@qwik.dev/core": "*",
 		"vite": ">=6.3.5",
-		"vitest": "^4.0.0"
+		"vitest": "^4.0.18"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.0.0",
 		"@playwright/test": "see flake.nix",
 		"@qwik.dev/core": "*",
 		"@types/node": "^22.15.17",
-		"@vitest/browser-playwright": "^4.0.0",
+		"@vitest/browser-playwright": "^4.0.18",
 		"magic-regexp": "^0.10.0",
 		"bumpp": "^10.1.0",
 		"ignore": "^7.0.5",
 		"tsdown": "^0.15.9",
 		"typescript": "^5.8.3",
-		"vitest": "^4.0.0"
+		"vitest": "^4.0.18"
 	},
 	"pnpm": {
 		"overrides": {
