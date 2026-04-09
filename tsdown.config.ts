@@ -6,6 +6,7 @@ export default defineConfig([
 		format: ["esm"],
 		dts: true,
 		platform: "browser",
+		external: ["vitest", "vitest/browser"],
 	},
 	{
 		entry: ["./src/ssr-plugin.ts"],

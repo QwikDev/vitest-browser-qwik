@@ -63,7 +63,13 @@
 	},
 	"peerDependencies": {
 		"@qwik.dev/core": "*",
-		"vite": ">=6.3.5"
+		"vite": ">=6.3.5",
+		"vitest": "^4.0.18"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.0.0",
