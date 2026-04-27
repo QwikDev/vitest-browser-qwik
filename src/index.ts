@@ -1,5 +1,5 @@
 import type { JSXNode, JSXOutput } from "@qwik.dev/core";
-import { beforeEach } from "vitest";
+import { afterEach, beforeEach } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, type RenderResult, render, renderServerHTML } from "./pure";
 
@@ -29,6 +29,10 @@ page.extend({
 });
 
 beforeEach(async () => {
+	await cleanup();
+});
+
+afterEach(async () => {
 	await cleanup();
 });
 

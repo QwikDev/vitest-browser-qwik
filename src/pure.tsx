@@ -31,6 +31,14 @@ export interface SSRRenderOptions {
 const mountedContainers = new Set<HTMLElement>();
 let qwikLoaderInjected = false;
 
+function destroyContainer(container: HTMLElement) {
+	container.innerHTML = "";
+	mountedContainers.delete(container);
+	if (container.parentNode === document.body) {
+		document.body.removeChild(container);
+	}
+}
+
 function csrQwikLoader() {
 	if (qwikLoaderInjected) return;
 
@@ -47,11 +55,7 @@ function createRenderResult(
 	mountedContainers.add(container);
 
 	const unmount = () => {
-		container.innerHTML = "";
-		mountedContainers.delete(container);
-		if (container.parentNode === document.body) {
-			document.body.removeChild(container);
-		}
+		destroyContainer(container);
 	};
 
 	return {
@@ -168,10 +172,6 @@ export async function renderHook<Result>(
 
 export async function cleanup(): Promise<void> {
 	mountedContainers.forEach((container) => {
-		container.innerHTML = "";
-		if (container.parentNode === document.body) {
-			document.body.removeChild(container);
-		}
+		destroyContainer(container);
 	});
-	mountedContainers.clear();
 }
