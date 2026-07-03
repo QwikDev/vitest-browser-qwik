@@ -1,4 +1,5 @@
 import type { JSXOutput } from "@qwik.dev/core";
+import * as qwikCore from "@qwik.dev/core";
 import { component$, render as qwikRender } from "@qwik.dev/core";
 import { getQwikLoaderScript } from "@qwik.dev/core/server";
 import type { Locator, LocatorSelectors } from "vitest/browser";
@@ -120,6 +121,30 @@ function setHTMLWithScripts(container: HTMLElement, html: string) {
 	});
 }
 
+// Runtime export of @qwik.dev/core that public.d.ts does not declare
+const { getDomContainer } = qwikCore as unknown as {
+	getDomContainer?: (element: Element) => unknown;
+};
+
+function resumeQwikContainer(container: HTMLElement) {
+	const qContainer = container.querySelector("[q\\:container]");
+	if (!qContainer || !getDomContainer) return;
+
+	// Core attaches vnode data/refs to containers via processVNodeData(document), which
+	// only runs once per page behind a document-level flag. Containers injected after a
+	// previous resume would be skipped and fail with "Missing qVNodeRefs", so clear the
+	// flag and resume eagerly: the DomContainer constructor re-walks every container in
+	// the document, old and new alike. The flag is qVNodeData up to core 2.0.0-beta.24-ish
+	// and qVNodeDataProcessed on newer cores.
+	const qDocument = document as {
+		qVNodeData?: unknown;
+		qVNodeDataProcessed?: unknown;
+	};
+	delete qDocument.qVNodeData;
+	delete qDocument.qVNodeDataProcessed;
+	getDomContainer(qContainer);
+}
+
 export function renderServerHTML(
 	html: string,
 	{ container, baseElement }: SSRRenderOptions = {},
@@ -127,6 +152,7 @@ export function renderServerHTML(
 	const setup = setupContainer(baseElement, container);
 
 	setHTMLWithScripts(setup.container, html);
+	resumeQwikContainer(setup.container);
 
 	return createRenderResult(setup.container, setup.baseElement);
 }

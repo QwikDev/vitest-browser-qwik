@@ -1,16 +1,16 @@
 import { resolve } from "node:path";
-import type { Node, VariableDeclaration } from "@oxc-project/types";
+import type { Node } from "@oxc-project/types";
 import { anyOf, createRegExp, exactly, maybe } from "magic-regexp";
 import MagicString from "magic-string";
 import { parseSync } from "oxc-parser";
 import type { Plugin } from "vitest/config";
 import type { BrowserCommand } from "vitest/node";
 import {
+	cleanTestModuleForSSR,
 	extractPropsFromJSX,
 	hasCommandsImport,
 	hasRenderSSRCallInAST,
 	isCallExpression,
-	isExpressionStatement,
 	isImportDeclaration,
 	isJSXElement,
 	isVariableDeclarator,
@@ -32,43 +32,16 @@ type ComponentFormat = BrowserCommand<
 >;
 
 type LocalComponentFormat = BrowserCommand<
-	[
-		testFilePath: string,
-		componentName: string,
-		allLocalComponents: string[],
-		props?: Record<string, unknown>,
-	]
+	[testFilePath: string, componentName: string, props?: Record<string, unknown>]
 >;
 
-function isBrowserOnlySource(source: string | undefined): boolean {
-	if (!source) return false;
-	return (
-		source === "vitest" ||
-		source.startsWith("vitest/") ||
-		source === "vitest-browser-qwik" ||
-		source.startsWith("vitest-browser-qwik/") ||
-		source.includes("@vitest/")
-	);
-}
-
-function referencesStrippedId(
-	node: Node | null | undefined,
-	strippedIds: Set<string>,
-): boolean {
-	if (!node || typeof node !== "object") return false;
-	if (node.type === "Identifier") return strippedIds.has(node.name);
-	if (node.type === "MemberExpression")
-		return referencesStrippedId(node.object as Node, strippedIds);
-	if (isCallExpression(node))
-		return referencesStrippedId(node.callee as Node, strippedIds);
-	return false;
-}
-
-function isVariableDeclaration(node: Node): node is VariableDeclaration {
-	return node.type === "VariableDeclaration";
-}
-
 let userDefines: Record<string, string> = {};
+
+// Test files that the renderSSRLocal command loads in the SSR environment; the transform
+// serves them cleaned (vitest imports and test() calls stripped) instead of verbatim.
+const ssrCleanTestPaths = new Set<string>();
+
+const stripQuery = (id: string) => id.split("?")[0];
 
 const renderSSRCommand: ComponentFormat = async (
 	ctx,
@@ -89,106 +62,32 @@ const renderSSRCommand: ComponentFormat = async (
 		);
 	}
 
-	return await renderComponentToSSR(ctx, Component, props);
+	return await renderComponentToSSR(ctx, Component, props, [
+		absoluteComponentPath,
+	]);
 };
 
 const renderSSRLocalCommand: LocalComponentFormat = async (
 	ctx,
 	testFilePath: string,
 	componentName: string,
-	allLocalComponents: string[],
 	props: Record<string, unknown> = {},
 ) => {
 	const viteServer = ctx.project.vite;
 
-	const { readFileSync, writeFileSync, unlinkSync } = await import("node:fs");
-	const { dirname, join } = await import("node:path");
+	// Load the test file itself: segment hashes are path-salted, so SSR must render from
+	// the same id as the client-transformed test module for serialized QRLs to resolve.
+	ssrCleanTestPaths.add(stripQuery(testFilePath));
+	const componentModule = await viteServer.ssrLoadModule(testFilePath);
+	const Component = componentModule[componentName];
 
-	const tempFileName = `ssr-test-${Date.now()}-${Math.random().toString(36).slice(2, 11)}.tsx`;
-	// temp file inthe same folder to support relative imports
-	const testFileDir = dirname(testFilePath);
-	const tempFilePath = join(testFileDir, tempFileName);
-
-	try {
-		const originalContent = readFileSync(testFilePath, "utf8");
-		const ast = parseSync(testFilePath, originalContent);
-		const s = new MagicString(originalContent);
-		const strippedIds = new Set<string>();
-
-		function cleanTestFile(node: Node): undefined {
-			if (
-				isImportDeclaration(node) &&
-				isBrowserOnlySource(node.source?.value)
-			) {
-				for (const spec of node.specifiers || []) {
-					if (spec.local?.name) strippedIds.add(spec.local.name);
-				}
-				s.remove(node.start, node.end);
-				return undefined;
-			}
-
-			if (
-				isExpressionStatement(node) &&
-				node.expression?.type === "CallExpression"
-			) {
-				const callExpr = node.expression;
-				if (callExpr.callee.type === "Identifier") {
-					const calleeName = callExpr.callee.name;
-					if (
-						calleeName === "test" ||
-						calleeName === "describe" ||
-						calleeName === "it"
-					) {
-						s.remove(node.start, node.end);
-						return undefined;
-					}
-				}
-			}
-
-			if (isVariableDeclaration(node)) {
-				const allReference = node.declarations.every((d) =>
-					referencesStrippedId(d.init as Node | null, strippedIds),
-				);
-				if (allReference) {
-					for (const d of node.declarations) {
-						if (d.id.type === "Identifier") strippedIds.add(d.id.name);
-					}
-					s.remove(node.start, node.end);
-					return undefined;
-				}
-			}
-
-			traverseChildren(node, cleanTestFile);
-			return undefined;
-		}
-
-		cleanTestFile(ast.program);
-
-		let cleanedContent = s.toString();
-		if (allLocalComponents.length > 0) {
-			const exportStatement = `\n\n// Auto-generated exports for local components\nexport { ${allLocalComponents.join(", ")} };`;
-			cleanedContent += exportStatement;
-		}
-
-		writeFileSync(tempFilePath, cleanedContent, "utf8");
-
-		const componentModule = await viteServer.ssrLoadModule(tempFilePath);
-		const Component = componentModule[componentName];
-
-		if (!Component) {
-			throw new Error(
-				`[vitest-browser-qwik]: Local component "${componentName}" not found in ${testFilePath}. Available exports: ${Object.keys(componentModule).join(", ")}`,
-			);
-		}
-
-		return await renderComponentToSSR(ctx, Component, props);
-	} finally {
-		try {
-			unlinkSync(tempFilePath);
-		} catch (cleanupError) {
-			console.warn("Failed to clean up temporary file:", cleanupError);
-		}
+	if (!Component) {
+		throw new Error(
+			`[vitest-browser-qwik]: Local component "${componentName}" not found in ${testFilePath}. Available exports: ${Object.keys(componentModule).join(", ")}`,
+		);
 	}
+
+	return await renderComponentToSSR(ctx, Component, props);
 };
 
 export function testSSR(): Plugin {
@@ -211,6 +110,14 @@ export function testSSR(): Plugin {
 				code: /renderSSR/,
 			},
 			async handler(code, id) {
+				// In non-client environments (ssrLoadModule from renderSSRLocal), serve the
+				// registered test files cleaned so they can execute outside the test runner.
+				const environmentName = this?.environment?.name;
+				if (environmentName && environmentName !== "client") {
+					if (!ssrCleanTestPaths.has(stripQuery(id))) return null;
+					return cleanTestModuleForSSR(id, code);
+				}
+
 				const ast = parseSync(id, code);
 				if (!hasRenderSSRCallInAST(ast.program, code)) return null;
 
@@ -303,12 +210,8 @@ export function testSSR(): Plugin {
 
 						const localComponentCode = localComponents.get(componentName);
 						if (localComponentCode) {
-							const allLocalComponentNames = Array.from(localComponents.keys());
-							const localComponentsArray = JSON.stringify(
-								allLocalComponentNames,
-							);
 							const replacement = `(async () => {
-								const { html } = await commands.renderSSRLocal("${id}", "${componentName}", ${localComponentsArray}${propsStr});
+								const { html } = await commands.renderSSRLocal("${id}", "${componentName}"${propsStr});
 								return renderServerHTML(html);
 							})()`;
 							s.overwrite(node.start, node.end, replacement);
