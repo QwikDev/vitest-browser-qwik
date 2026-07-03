@@ -261,13 +261,7 @@ function isVariableDeclaration(node: Node): node is VariableDeclaration {
 	return node.type === "VariableDeclaration";
 }
 
-/**
- * Strips vitest-only imports and test/describe/it statements so a test module can be
- * ssrLoadModule'd under its own path. Keeping the original path matters: qwik segment
- * hashes are path-salted, so serialized QRLs only resolve against the client-transformed
- * test module if SSR rendered from the same id. Local components are re-exported so the
- * renderSSRLocal command can pick them up.
- */
+/** Strips vitest-only code so a test module survives ssrLoadModule. */
 export function cleanTestModuleForSSR(
 	id: string,
 	code: string,
@@ -378,21 +372,12 @@ const getClientModule = async (viteServer: ViteDevServer, moduleId: string) => {
 		);
 	}
 	const module = clientEnv.moduleGraph.getModuleById(resolvedId);
-	// console.log("Resolved client module", moduleId, resolved, module);
 	if (!module) {
 		throw new Error(`Module "${moduleId}" not found in client module graph.`);
 	}
 	return module;
 };
-/**
- * Transforms the given modules (and their local imports, transitively) in the client
- * environment of the given server. Serialized dev QRLs point at path-derived segment
- * URLs that qwikVite can only serve once the segment's parent module has been
- * transformed in that client environment — without this, resume finds no handlers.
- * User segments are intentionally NOT added to the manifest mapping: a mapping entry
- * makes the serializer emit prod-style hash-only symbol names, which dev segment
- * modules (exporting full symbol names) cannot satisfy.
- */
+/** qwikVite only serves segment URLs of client-transformed parent modules. */
 async function warmClientModuleGraph(
 	viteServer: ViteDevServer,
 	rootModuleIds: string[],
@@ -447,15 +432,14 @@ export async function renderComponentToSSR(
 	if (!ctx.testPath) {
 		throw new Error("ctx.testPath is required for SSR rendering");
 	}
-	// The browser is served by its own vite server, distinct from ctx.project.vite that
-	// renders the SSR HTML — QRLs resolve at runtime against the browser server, so its
-	// client module graph is the one that must be warmed.
+	// QRLs resolve against the browser's own vite server, not ctx.project.vite
 	const browserViteServer = (ctx.project.browser?.vite ??
 		viteServer) as ViteDevServer;
 	await warmClientModuleGraph(browserViteServer, [
 		ctx.testPath,
 		...extraClientModuleIds,
 	]);
+	// No user segments here: mapping entries force prod-style hash-only symbols
 	const mapping: QwikManifest["mapping"] = {};
 	// qwik-internal qrl handlers
 	const handlersModule = await getClientModule(
@@ -477,7 +461,6 @@ export async function renderComponentToSSR(
 		mapping,
 	} as QwikManifest;
 
-	//  await Promise.allSettled([...viteServer.moduleGraph.idToModuleMap.keys()].map(id => viteServer.environments.client.fetchModule(id)));
 	DEBUG && console.log("mapping", mapping);
 
 	let html = DEBUG

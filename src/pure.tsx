@@ -102,26 +102,23 @@ export async function render(
 
 function setHTMLWithScripts(container: HTMLElement, html: string) {
 	container.innerHTML = html;
-	// Find all script tags inside the container
 	const scripts = container.querySelectorAll("script");
 
+	// Recreate script tags to trigger execution
 	scripts.forEach((oldScript) => {
 		const newScript = document.createElement("script");
 
-		// Copy attributes (like src, type, etc.)
 		for (const attr of Array.from(oldScript.attributes)) {
 			newScript.setAttribute(attr.name, attr.value);
 		}
 
-		// Inline script content
 		newScript.text = oldScript.textContent ?? "";
 
-		// Replace the old script with the new one to trigger execution
 		oldScript.parentNode?.replaceChild(newScript, oldScript);
 	});
 }
 
-// Runtime export of @qwik.dev/core that public.d.ts does not declare
+// Runtime export missing from core's public.d.ts
 const { getDomContainer } = qwikCore as unknown as {
 	getDomContainer?: (element: Element) => unknown;
 };
@@ -130,16 +127,12 @@ function resumeQwikContainer(container: HTMLElement) {
 	const qContainer = container.querySelector("[q\\:container]");
 	if (!qContainer || !getDomContainer) return;
 
-	// Core attaches vnode data/refs to containers via processVNodeData(document), which
-	// only runs once per page behind a document-level flag. Containers injected after a
-	// previous resume would be skipped and fail with "Missing qVNodeRefs", so clear the
-	// flag and resume eagerly: the DomContainer constructor re-walks every container in
-	// the document, old and new alike. The flag is qVNodeData up to core 2.0.0-beta.24-ish
-	// and qVNodeDataProcessed on newer cores.
+	// Re-trigger core's once-per-page vnode processing for late-injected containers
 	const qDocument = document as {
 		qVNodeData?: unknown;
 		qVNodeDataProcessed?: unknown;
 	};
+	// Flag name depends on core version
 	delete qDocument.qVNodeData;
 	delete qDocument.qVNodeDataProcessed;
 	getDomContainer(qContainer);
@@ -181,7 +174,6 @@ export async function renderHook<Result>(
 
 	const screen = await render(<TestHookComponent />);
 
-	// Wait for the component to actually render
 	await renderPromise;
 
 	return {

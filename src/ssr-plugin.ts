@@ -37,8 +37,7 @@ type LocalComponentFormat = BrowserCommand<
 
 let userDefines: Record<string, string> = {};
 
-// Test files that the renderSSRLocal command loads in the SSR environment; the transform
-// serves them cleaned (vitest imports and test() calls stripped) instead of verbatim.
+// Test files the SSR environment must serve cleaned
 const ssrCleanTestPaths = new Set<string>();
 
 const stripQuery = (id: string) => id.split("?")[0];
@@ -75,8 +74,7 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 ) => {
 	const viteServer = ctx.project.vite;
 
-	// Load the test file itself: segment hashes are path-salted, so SSR must render from
-	// the same id as the client-transformed test module for serialized QRLs to resolve.
+	// Segment hashes are path-salted: SSR must load the client id
 	ssrCleanTestPaths.add(stripQuery(testFilePath));
 	const componentModule = await viteServer.ssrLoadModule(testFilePath);
 	const Component = componentModule[componentName];
@@ -110,8 +108,6 @@ export function testSSR(): Plugin {
 				code: /renderSSR/,
 			},
 			async handler(code, id) {
-				// In non-client environments (ssrLoadModule from renderSSRLocal), serve the
-				// registered test files cleaned so they can execute outside the test runner.
 				const environmentName = this?.environment?.name;
 				if (environmentName && environmentName !== "client") {
 					if (!ssrCleanTestPaths.has(stripQuery(id))) return null;

@@ -1,7 +1,6 @@
 import { component$, useSignal } from "@qwik.dev/core";
 
-// Only imported by ssr-interactivity.test.tsx: resume must work without
-// another test warming the client module graph with this file first.
+// Keep imported only by ssr-interactivity.test.tsx: repro needs cold module graph
 export const SSRButton = component$<{ initialCount?: number }>(
 	({ initialCount = 0 }) => {
 		const count = useSignal(initialCount);
