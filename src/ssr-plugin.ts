@@ -35,6 +35,34 @@ type LocalComponentFormat = BrowserCommand<
 	[testFilePath: string, componentName: string, props?: Record<string, unknown>]
 >;
 
+function isBrowserOnlySource(source: string | undefined): boolean {
+	if (!source) return false;
+	return (
+		source === "vitest" ||
+		source.startsWith("vitest/") ||
+		source === "vitest-browser-qwik" ||
+		source.startsWith("vitest-browser-qwik/") ||
+		source.includes("@vitest/")
+	);
+}
+
+function referencesStrippedId(
+	node: Node | null | undefined,
+	strippedIds: Set<string>,
+): boolean {
+	if (!node || typeof node !== "object") return false;
+	if (node.type === "Identifier") return strippedIds.has(node.name);
+	if (node.type === "MemberExpression")
+		return referencesStrippedId(node.object as Node, strippedIds);
+	if (isCallExpression(node))
+		return referencesStrippedId(node.callee as Node, strippedIds);
+	return false;
+}
+
+function isVariableDeclaration(node: Node): node is VariableDeclaration {
+	return node.type === "VariableDeclaration";
+}
+
 let userDefines: Record<string, string> = {};
 
 // Test files the SSR environment must serve cleaned
@@ -87,34 +115,6 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 
 	return await renderComponentToSSR(ctx, Component, props);
 };
-
-function isBrowserOnlySource(source: string | undefined): boolean {
-	if (!source) return false;
-	return (
-		source === "vitest" ||
-		source.startsWith("vitest/") ||
-		source === "vitest-browser-qwik" ||
-		source.startsWith("vitest-browser-qwik/") ||
-		source.includes("@vitest/")
-	);
-}
-
-function referencesStrippedId(
-	node: Node | null | undefined,
-	strippedIds: Set<string>,
-): boolean {
-	if (!node || typeof node !== "object") return false;
-	if (node.type === "Identifier") return strippedIds.has(node.name);
-	if (node.type === "MemberExpression")
-		return referencesStrippedId(node.object as Node, strippedIds);
-	if (isCallExpression(node))
-		return referencesStrippedId(node.callee as Node, strippedIds);
-	return false;
-}
-
-function isVariableDeclaration(node: Node): node is VariableDeclaration {
-	return node.type === "VariableDeclaration";
-}
 
 /** Strips vitest-only code so a test module survives ssrLoadModule. */
 function cleanTestModuleForSSR(
