@@ -1,6 +1,6 @@
-import type { JSXOutput } from "@qwik.dev/core";
+import type { Component, JSXOutput, NoSerialize } from "@qwik.dev/core";
 import * as qwikCore from "@qwik.dev/core";
-import { component$, render as qwikRender } from "@qwik.dev/core";
+import { inlinedQrl, noSerialize, render as qwikRender } from "@qwik.dev/core";
 import { getQwikLoaderScript } from "@qwik.dev/core/server";
 import type { Locator, LocatorSelectors } from "vitest/browser";
 import { type PrettyDOMOptions, utils } from "vitest/browser";
@@ -33,6 +33,11 @@ const mountedContainers = new Set<HTMLElement>();
 let qwikLoaderInjected = false;
 
 function destroyContainer(container: HTMLElement) {
+	// qDestroy resets core's per-page vnode-data state so the next render resumes cleanly.
+	const qContainer = container.matches("[q\\:container]")
+		? container
+		: container.querySelector("[q\\:container]");
+	(qContainer as { qDestroy?: () => void } | null)?.qDestroy?.();
 	container.innerHTML = "";
 	mountedContainers.delete(container);
 	if (container.parentNode === document.body) {
@@ -118,23 +123,17 @@ function setHTMLWithScripts(container: HTMLElement, html: string) {
 	});
 }
 
-// Runtime export missing from core's public.d.ts
-const { getDomContainer } = qwikCore as unknown as {
+// Runtime exports missing from core's public.d.ts
+const { getDomContainer, componentQrl } = qwikCore as unknown as {
 	getDomContainer?: (element: Element) => unknown;
+	componentQrl: <P extends Record<string, unknown>>(
+		qrl: unknown,
+	) => Component<P>;
 };
 
 function resumeQwikContainer(container: HTMLElement) {
 	const qContainer = container.querySelector("[q\\:container]");
 	if (!qContainer || !getDomContainer) return;
-
-	// Re-trigger core's once-per-page vnode processing for late-injected containers
-	const qDocument = document as {
-		qVNodeData?: unknown;
-		qVNodeDataProcessed?: unknown;
-	};
-	// Flag name depends on core version
-	delete qDocument.qVNodeData;
-	delete qDocument.qVNodeDataProcessed;
 	getDomContainer(qContainer);
 }
 
@@ -155,6 +154,20 @@ export interface RenderHookResult<Result> {
 	unmount: () => void;
 }
 
+interface HookRunnerProps extends Record<string, unknown> {
+	runner: NoSerialize<() => void>;
+}
+
+// componentQrl(inlinedQrl) works without the optimizer; the noSerialize runner
+// prop dodges dev's eager capture check but would not survive serialization,
+// so keep this CSR-only.
+const TestHookComponent = componentQrl<HookRunnerProps>(
+	inlinedQrl(({ runner }: HookRunnerProps) => {
+		runner?.();
+		return <div data-testid="hook-result"></div>;
+	}, "TestHookComponent_render"),
+);
+
 export async function renderHook<Result>(
 	hook: () => Result,
 ): Promise<RenderHookResult<Result>> {
@@ -165,23 +178,19 @@ export async function renderHook<Result>(
 		resolveRender = resolve;
 	});
 
-	const TestHookComponent = component$(() => {
-		const result = hook();
-		resultContainer.value = result;
+	const runner = noSerialize(() => {
+		resultContainer.value = hook();
 		resolveRender();
-		return <div data-testid="hook-result"></div>;
 	});
 
-	const screen = await render(<TestHookComponent />);
+	const screen = await render(<TestHookComponent runner={runner} />);
 
 	await renderPromise;
 
+	// renderPromise only resolves after the runner ran, so the result is set
+	// (and may legitimately be undefined).
 	return {
-		result:
-			resultContainer.value ??
-			(() => {
-				throw new Error("Hook result not available");
-			})(),
+		result: resultContainer.value as Result,
 		unmount: () => {
 			screen.unmount();
 		},
