@@ -1,6 +1,6 @@
-import type { Component, JSXOutput } from "@qwik.dev/core";
-import * as qwikCore from "@qwik.dev/core";
+import type { JSXOutput } from "@qwik.dev/core";
 import { inlinedQrl, render as qwikRender } from "@qwik.dev/core";
+import { componentQrl, getDomContainer } from "@qwik.dev/core/internal";
 import { getQwikLoaderScript } from "@qwik.dev/core/server";
 import type { Locator, LocatorSelectors } from "vitest/browser";
 import { type PrettyDOMOptions, utils } from "vitest/browser";
@@ -123,17 +123,9 @@ function setHTMLWithScripts(container: HTMLElement, html: string) {
 	});
 }
 
-// Runtime exports missing from core's public.d.ts
-const { getDomContainer, componentQrl } = qwikCore as unknown as {
-	getDomContainer?: (element: Element) => unknown;
-	componentQrl: <P extends Record<string, unknown>>(
-		qrl: unknown,
-	) => Component<P>;
-};
-
 function resumeQwikContainer(container: HTMLElement) {
 	const qContainer = container.querySelector("[q\\:container]");
-	if (!qContainer || !getDomContainer) return;
+	if (!qContainer) return;
 	getDomContainer(qContainer);
 }
 
