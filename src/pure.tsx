@@ -1,6 +1,6 @@
-import type { Component, JSXOutput, NoSerialize } from "@qwik.dev/core";
+import type { Component, JSXOutput } from "@qwik.dev/core";
 import * as qwikCore from "@qwik.dev/core";
-import { inlinedQrl, noSerialize, render as qwikRender } from "@qwik.dev/core";
+import { inlinedQrl, render as qwikRender } from "@qwik.dev/core";
 import { getQwikLoaderScript } from "@qwik.dev/core/server";
 import type { Locator, LocatorSelectors } from "vitest/browser";
 import { type PrettyDOMOptions, utils } from "vitest/browser";
@@ -164,18 +164,16 @@ export async function renderHook<Result>(
 		resolveRender = resolve;
 	});
 
-	// noSerialize passes the hook through a prop instead of a closure capture, so
-	// neither the optimizer (source builds) nor dev's eager capture check flags it.
-	const runner = noSerialize(() => {
+	const runner = () => {
 		resultContainer.value = hook();
 		resolveRender();
-	});
+	};
 
-	// componentQrl(inlinedQrl) builds the component without the optimizer, which
-	// never transforms the published dist.
-	const TestHookComponent = componentQrl<{ runner: NoSerialize<() => void> }>(
-		inlinedQrl(({ runner }: { runner: NoSerialize<() => void> }) => {
-			runner?.();
+	// Passing the hook as a prop keeps it out of the closure the optimizer
+	// serializes; componentQrl(inlinedQrl) builds without the untransformed dist.
+	const TestHookComponent = componentQrl<{ runner: () => void }>(
+		inlinedQrl(({ runner }: { runner: () => void }) => {
+			runner();
 			return <div data-testid="hook-result"></div>;
 		}, "TestHookComponent_render"),
 	);
