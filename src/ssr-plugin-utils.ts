@@ -14,13 +14,10 @@ import type {
 	Node,
 	Function as OxcFunction,
 	Span,
-	VariableDeclaration,
 	VariableDeclarator,
 } from "@oxc-project/types";
 import type { Component } from "@qwik.dev/core";
 import type { QwikManifest } from "@qwik.dev/core/optimizer";
-import MagicString from "magic-string";
-import { parseSync } from "oxc-parser";
 import { ResolverFactory } from "oxc-resolver";
 import type { ViteDevServer } from "vite";
 import type { BrowserCommandContext } from "vitest/node";
@@ -231,134 +228,6 @@ export function hasCommandsImport(node: Node): boolean {
 			spec.imported.type === "Identifier" &&
 			spec.imported.name === "commands",
 	);
-}
-
-function isBrowserOnlySource(source: string | undefined): boolean {
-	if (!source) return false;
-	return (
-		source === "vitest" ||
-		source.startsWith("vitest/") ||
-		source === "vitest-browser-qwik" ||
-		source.startsWith("vitest-browser-qwik/") ||
-		source.includes("@vitest/")
-	);
-}
-
-function referencesStrippedId(
-	node: Node | null | undefined,
-	strippedIds: Set<string>,
-): boolean {
-	if (!node || typeof node !== "object") return false;
-	if (node.type === "Identifier") return strippedIds.has(node.name);
-	if (node.type === "MemberExpression")
-		return referencesStrippedId(node.object as Node, strippedIds);
-	if (isCallExpression(node))
-		return referencesStrippedId(node.callee as Node, strippedIds);
-	return false;
-}
-
-function isVariableDeclaration(node: Node): node is VariableDeclaration {
-	return node.type === "VariableDeclaration";
-}
-
-/** Strips vitest-only code so a test module survives ssrLoadModule. */
-export function cleanTestModuleForSSR(
-	id: string,
-	code: string,
-): { code: string; map: ReturnType<MagicString["generateMap"]> } | null {
-	const ast = parseSync(id, code);
-	const s = new MagicString(code);
-	const strippedIds = new Set<string>();
-	const localComponents = new Set<string>();
-	const exportedNames = new Set<string>();
-
-	function cleanTestFile(node: Node): undefined {
-		if (isImportDeclaration(node) && isBrowserOnlySource(node.source?.value)) {
-			for (const spec of node.specifiers || []) {
-				if (spec.local?.name) strippedIds.add(spec.local.name);
-			}
-			s.remove(node.start, node.end);
-			return undefined;
-		}
-
-		if (
-			isExpressionStatement(node) &&
-			node.expression?.type === "CallExpression"
-		) {
-			const callExpr = node.expression;
-			if (callExpr.callee.type === "Identifier") {
-				const calleeName = callExpr.callee.name;
-				if (
-					calleeName === "test" ||
-					calleeName === "describe" ||
-					calleeName === "it"
-				) {
-					s.remove(node.start, node.end);
-					return undefined;
-				}
-			}
-		}
-
-		if (node.type === "ExportNamedDeclaration") {
-			const exportNode = node as Node & {
-				specifiers?: { exported?: { name?: string } }[];
-				declaration?: VariableDeclaration | null;
-			};
-			for (const spec of exportNode.specifiers || []) {
-				if (spec.exported?.name) exportedNames.add(spec.exported.name);
-			}
-			if (
-				exportNode.declaration &&
-				isVariableDeclaration(exportNode.declaration)
-			) {
-				for (const d of exportNode.declaration.declarations) {
-					if (d.id.type === "Identifier") exportedNames.add(d.id.name);
-				}
-			}
-		}
-
-		if (isVariableDeclaration(node)) {
-			const allReference = node.declarations.every((d) =>
-				referencesStrippedId(d.init as Node | null, strippedIds),
-			);
-			if (allReference) {
-				for (const d of node.declarations) {
-					if (d.id.type === "Identifier") strippedIds.add(d.id.name);
-				}
-				s.remove(node.start, node.end);
-				return undefined;
-			}
-		}
-
-		if (
-			isVariableDeclarator(node) &&
-			node.id.type === "Identifier" &&
-			node.init?.type === "CallExpression" &&
-			node.init.callee.type === "Identifier" &&
-			node.init.callee.name === "component$"
-		) {
-			localComponents.add(node.id.name);
-		}
-
-		traverseChildren(node, cleanTestFile);
-		return undefined;
-	}
-
-	cleanTestFile(ast.program);
-
-	const toExport = [...localComponents].filter((n) => !exportedNames.has(n));
-	if (toExport.length > 0) {
-		s.append(
-			`\n\n// Auto-generated exports for local components\nexport { ${toExport.join(", ")} };`,
-		);
-	}
-
-	if (!s.hasChanged()) return null;
-
-	return {
-		code: s.toString(),
-		map: s.generateMap({ hires: true }),
-	};
 }
 
 const getClientModule = async (viteServer: ViteDevServer, moduleId: string) => {
