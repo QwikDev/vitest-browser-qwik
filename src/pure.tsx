@@ -154,20 +154,6 @@ export interface RenderHookResult<Result> {
 	unmount: () => void;
 }
 
-interface HookRunnerProps extends Record<string, unknown> {
-	runner: NoSerialize<() => void>;
-}
-
-// componentQrl(inlinedQrl) works without the optimizer; the noSerialize runner
-// prop dodges dev's eager capture check but would not survive serialization,
-// so keep this CSR-only.
-const TestHookComponent = componentQrl<HookRunnerProps>(
-	inlinedQrl(({ runner }: HookRunnerProps) => {
-		runner?.();
-		return <div data-testid="hook-result"></div>;
-	}, "TestHookComponent_render"),
-);
-
 export async function renderHook<Result>(
 	hook: () => Result,
 ): Promise<RenderHookResult<Result>> {
@@ -178,10 +164,21 @@ export async function renderHook<Result>(
 		resolveRender = resolve;
 	});
 
+	// noSerialize passes the hook through a prop instead of a closure capture, so
+	// neither the optimizer (source builds) nor dev's eager capture check flags it.
 	const runner = noSerialize(() => {
 		resultContainer.value = hook();
 		resolveRender();
 	});
+
+	// componentQrl(inlinedQrl) builds the component without the optimizer, which
+	// never transforms the published dist.
+	const TestHookComponent = componentQrl<{ runner: NoSerialize<() => void> }>(
+		inlinedQrl(({ runner }: { runner: NoSerialize<() => void> }) => {
+			runner?.();
+			return <div data-testid="hook-result"></div>;
+		}, "TestHookComponent_render"),
+	);
 
 	const screen = await render(<TestHookComponent runner={runner} />);
 
