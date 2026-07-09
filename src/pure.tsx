@@ -30,14 +30,17 @@ export interface SSRRenderOptions {
 }
 
 const mountedContainers = new Set<HTMLElement>();
+// Only SSR-resumed containers carry per-page vnode-data state that qDestroy must
+// reset; CSR renders don't, and qDestroy there would strip q:container before
+// teardown blur handlers resolve (Code(Q24)).
+const ssrContainers = new WeakSet<HTMLElement>();
 let qwikLoaderInjected = false;
 
 function destroyContainer(container: HTMLElement) {
-	// qDestroy resets core's per-page vnode-data state so the next render resumes cleanly.
-	const qContainer = container.matches("[q\\:container]")
-		? container
-		: container.querySelector("[q\\:container]");
-	(qContainer as { qDestroy?: () => void } | null)?.qDestroy?.();
+	if (ssrContainers.has(container)) {
+		const qContainer = container.querySelector("[q\\:container]");
+		(qContainer as { qDestroy?: () => void } | null)?.qDestroy?.();
+	}
 	container.innerHTML = "";
 	mountedContainers.delete(container);
 	if (container.parentNode === document.body) {
@@ -137,6 +140,7 @@ export function renderServerHTML(
 
 	setHTMLWithScripts(setup.container, html);
 	resumeQwikContainer(setup.container);
+	ssrContainers.add(setup.container);
 
 	return createRenderResult(setup.container, setup.baseElement);
 }
