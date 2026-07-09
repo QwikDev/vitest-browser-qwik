@@ -169,9 +169,8 @@ export async function renderHook<Result>(
 		resolveRender();
 	};
 
-	// The published dist is never optimizer-transformed, so component$'s $() would
-	// throw at runtime; componentQrl(inlinedQrl) is core's manual-QRL escape hatch.
-	// The hook rides in as a prop so it never enters the closure the optimizer serializes.
+	// component$ needs the optimizer (never runs on the published dist); the runner
+	// rides in as a prop so it stays out of the serialized closure.
 	const TestHookComponent = componentQrl<{ runner: () => void }>(
 		inlinedQrl(({ runner }: { runner: () => void }) => {
 			runner();

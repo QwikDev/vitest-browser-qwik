@@ -261,15 +261,10 @@ export async function renderComponentToSSR(
 	const { renderToStream } =
 		serverModule as typeof import("@qwik.dev/core/server");
 
-	// Handler symbols resolve against the browser's own vite server, not ctx.project.vite.
-	// Core (#8816) bootstraps user-segment parents on demand, so no pre-warming here.
+	// QRLs resolve against the browser's vite server, not ctx.project.vite.
 	const browserViteServer = (ctx.project.browser?.vite ??
 		viteServer) as ViteDevServer;
-	// Dev has no manifest — core derives user-segment URLs from the parent module's
-	// vite URL (getDevSegmentPath in @qwik.dev/core server/platform.ts), so we only
-	// map the internal handler symbols (_[a-z]) here. Core would point those at a
-	// virtual @qwik-handlers URL that doesn't resolve in the browser server, so
-	// override them to the real handlers.mjs URL; user segments fall through to core.
+	// Core derives user-segment URLs itself; we only override the handler symbols.
 	const mapping: QwikManifest["mapping"] = {};
 	const handlersModule = await getClientModule(
 		browserViteServer,
@@ -285,8 +280,7 @@ export async function renderComponentToSSR(
 	for (const key of handlerNames) {
 		mapping[key] = handlersUrl;
 	}
-	// Minimal manifest: makes core's dev symbol-mapper active and carries the
-	// handler overrides above; everything else resolves via getDevSegmentPath.
+	// Minimal manifest just activates core's dev symbol-mapper.
 	const qwikManifest = {
 		manifestHash: "dev",
 		mapping,
