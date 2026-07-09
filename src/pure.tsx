@@ -36,9 +36,13 @@ const mountedContainers = new Set<HTMLElement>();
 const ssrContainers = new WeakSet<HTMLElement>();
 let qwikLoaderInjected = false;
 
+function findQwikContainer(container: HTMLElement): Element | null {
+	return container.querySelector("[q\\:container]");
+}
+
 function destroyContainer(container: HTMLElement) {
 	if (ssrContainers.has(container)) {
-		const qContainer = container.querySelector("[q\\:container]");
+		const qContainer = findQwikContainer(container);
 		(qContainer as { qDestroy?: () => void } | null)?.qDestroy?.();
 	}
 	container.innerHTML = "";
@@ -127,7 +131,7 @@ function setHTMLWithScripts(container: HTMLElement, html: string) {
 }
 
 function resumeQwikContainer(container: HTMLElement) {
-	const qContainer = container.querySelector("[q\\:container]");
+	const qContainer = findQwikContainer(container);
 	if (!qContainer) return;
 	getDomContainer(qContainer);
 }
@@ -165,8 +169,9 @@ export async function renderHook<Result>(
 		resolveRender();
 	};
 
-	// Passing the hook as a prop keeps it out of the closure the optimizer
-	// serializes; componentQrl(inlinedQrl) builds without the untransformed dist.
+	// The published dist is never optimizer-transformed, so component$'s $() would
+	// throw at runtime; componentQrl(inlinedQrl) is core's manual-QRL escape hatch.
+	// The hook rides in as a prop so it never enters the closure the optimizer serializes.
 	const TestHookComponent = componentQrl<{ runner: () => void }>(
 		inlinedQrl(({ runner }: { runner: () => void }) => {
 			runner();
