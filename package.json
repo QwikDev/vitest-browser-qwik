@@ -74,7 +74,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.0.0",
 		"@playwright/test": "see flake.nix",
-		"@qwik.dev/core": "https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@e70b299",
+		"@qwik.dev/core": "https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051",
 		"@types/node": "^22.15.17",
 		"@vitest/browser-playwright": "^4.0.18",
 		"bumpp": "^10.1.0",

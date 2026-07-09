@@ -35,8 +35,8 @@ importers:
         specifier: 1.56.1
         version: 1.56.1
       '@qwik.dev/core':
-        specifier: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@e70b299
-        version: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@e70b299(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
+        specifier: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051
+        version: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)
       '@types/node':
         specifier: ^22.15.17
         version: 22.15.32
@@ -517,8 +517,8 @@ packages:
   '@quansync/fs@0.1.5':
     resolution: {integrity: sha512-lNS9hL2aS2NZgNW7BBj+6EBl4rOf8l+tQ0eRY6JWCI8jI2kc53gSoqbjojU0OnAWhzoXiOjFyGsHcDGePB3lhA==}
 
-  '@qwik.dev/core@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@e70b299':
-    resolution: {tarball: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@e70b299}
+  '@qwik.dev/core@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051':
+    resolution: {tarball: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051}
     version: 2.0.0-beta.37
     engines: {node: ^20.3.0 || >=21.0.0}
     hasBin: true
@@ -532,8 +532,8 @@ packages:
       vitest:
         optional: true
 
-  '@qwik.dev/optimizer@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@e70b299':
-    resolution: {tarball: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@e70b299}
+  '@qwik.dev/optimizer@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@8e75051':
+    resolution: {tarball: https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@8e75051}
     version: 2.1.0-beta.5
     engines: {node: ^20.3.0 || >=21.0.0}
 
@@ -1759,9 +1759,9 @@ snapshots:
     dependencies:
       quansync: 0.2.11
 
-  '@qwik.dev/core@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@e70b299(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)':
+  '@qwik.dev/core@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051(vite@6.3.5(@types/node@22.15.32)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0))(vitest@4.0.18)':
     dependencies:
-      '@qwik.dev/optimizer': https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@e70b299
+      '@qwik.dev/optimizer': https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@8e75051
       csstype: 3.2.3
       launch-editor: 2.13.0
       magic-string: 0.30.21
@@ -1770,7 +1770,7 @@ snapshots:
     optionalDependencies:
       vitest: 4.0.18(@types/node@22.15.32)(@vitest/browser-playwright@4.0.18)(happy-dom@17.6.3)(jiti@2.6.1)(tsx@4.20.3)(yaml@2.8.0)
 
-  '@qwik.dev/optimizer@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@e70b299': {}
+  '@qwik.dev/optimizer@https://pkg.pr.new/QwikDev/qwik/@qwik.dev/optimizer@8e75051': {}
 
   '@rolldown/binding-android-arm64@1.0.0-beta.44':
     optional: true

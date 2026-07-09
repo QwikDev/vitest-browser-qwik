@@ -89,9 +89,7 @@ const renderSSRCommand: ComponentFormat = async (
 		);
 	}
 
-	return await renderComponentToSSR(ctx, Component, props, [
-		absoluteComponentPath,
-	]);
+	return await renderComponentToSSR(ctx, Component, props);
 };
 
 const renderSSRLocalCommand: LocalComponentFormat = async (

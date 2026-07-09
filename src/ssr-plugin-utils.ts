@@ -246,50 +246,10 @@ const getClientModule = async (viteServer: ViteDevServer, moduleId: string) => {
 	}
 	return module;
 };
-// SSR runs in the node vite server, but the serialized QRL segment URLs are
-// fetched at runtime by the browser's separate vite server — which never imported
-// these modules. qwikVite only serves a segment URL once its parent module is in
-// that server's graph, so walk the client graph from the test file to pre-load it.
-async function warmClientModuleGraph(
-	viteServer: ViteDevServer,
-	rootModuleIds: string[],
-): Promise<void> {
-	const visited = new Set<string>();
-	const queue = [...rootModuleIds];
-
-	while (queue.length > 0) {
-		const moduleId = queue.shift() as string;
-		if (visited.has(moduleId)) continue;
-		visited.add(moduleId);
-
-		let module: Awaited<ReturnType<typeof getClientModule>>;
-		try {
-			module = await getClientModule(viteServer, moduleId);
-		} catch (e) {
-			DEBUG && console.log("warm: FAILED", moduleId, e);
-			continue;
-		}
-		if (module.id) visited.add(module.id);
-
-		for (const importedModule of module.importedModules) {
-			const importedId = importedModule.id;
-			if (
-				!importedId ||
-				importedId.includes("node_modules") ||
-				importedId.startsWith("\0")
-			) {
-				continue;
-			}
-			queue.push(importedId);
-		}
-	}
-}
-
 export async function renderComponentToSSR(
 	ctx: BrowserCommandContext,
 	Component: Component,
 	props: Record<string, unknown> = {},
-	extraClientModuleIds: string[] = [],
 ): Promise<{ html: string }> {
 	const viteServer = ctx.project.vite as ViteDevServer;
 
@@ -301,16 +261,10 @@ export async function renderComponentToSSR(
 	const { renderToStream } =
 		serverModule as typeof import("@qwik.dev/core/server");
 
-	if (!ctx.testPath) {
-		throw new Error("ctx.testPath is required for SSR rendering");
-	}
-	// QRLs resolve against the browser's own vite server, not ctx.project.vite
+	// Handler symbols resolve against the browser's own vite server, not ctx.project.vite.
+	// Core (#8816) bootstraps user-segment parents on demand, so no pre-warming here.
 	const browserViteServer = (ctx.project.browser?.vite ??
 		viteServer) as ViteDevServer;
-	await warmClientModuleGraph(browserViteServer, [
-		ctx.testPath,
-		...extraClientModuleIds,
-	]);
 	// Dev has no manifest — core derives user-segment URLs from the parent module's
 	// vite URL (getDevSegmentPath in @qwik.dev/core server/platform.ts), so we only
 	// map the internal handler symbols (_[a-z]) here. Core would point those at a
