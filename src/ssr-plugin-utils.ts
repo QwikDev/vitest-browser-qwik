@@ -246,7 +246,10 @@ const getClientModule = async (viteServer: ViteDevServer, moduleId: string) => {
 	}
 	return module;
 };
-/** qwikVite only serves segment URLs of client-transformed parent modules. */
+// SSR runs in the node vite server, but the serialized QRL segment URLs are
+// fetched at runtime by the browser's separate vite server — which never imported
+// these modules. qwikVite only serves a segment URL once its parent module is in
+// that server's graph, so walk the client graph from the test file to pre-load it.
 async function warmClientModuleGraph(
 	viteServer: ViteDevServer,
 	rootModuleIds: string[],
@@ -308,9 +311,12 @@ export async function renderComponentToSSR(
 		ctx.testPath,
 		...extraClientModuleIds,
 	]);
-	// No user segments here: mapping entries force prod-style hash-only symbols
+	// Dev has no manifest — core derives user-segment URLs from the parent module's
+	// vite URL (getDevSegmentPath in @qwik.dev/core server/platform.ts), so we only
+	// map the internal handler symbols (_[a-z]) here. Core would point those at a
+	// virtual @qwik-handlers URL that doesn't resolve in the browser server, so
+	// override them to the real handlers.mjs URL; user segments fall through to core.
 	const mapping: QwikManifest["mapping"] = {};
-	// qwik-internal qrl handlers
 	const handlersModule = await getClientModule(
 		browserViteServer,
 		"@qwik.dev/core/handlers.mjs",
@@ -325,6 +331,8 @@ export async function renderComponentToSSR(
 	for (const key of handlerNames) {
 		mapping[key] = handlersUrl;
 	}
+	// Minimal manifest: makes core's dev symbol-mapper active and carries the
+	// handler overrides above; everything else resolves via getDevSegmentPath.
 	const qwikManifest = {
 		manifestHash: "dev",
 		mapping,
