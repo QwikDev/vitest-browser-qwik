@@ -32,12 +32,7 @@ type ComponentFormat = BrowserCommand<
 >;
 
 type LocalComponentFormat = BrowserCommand<
-	[
-		testFilePath: string,
-		componentName: string,
-		allLocalComponents: string[],
-		props?: Record<string, unknown>,
-	]
+	[testFilePath: string, componentName: string, props?: Record<string, unknown>]
 >;
 
 function isBrowserOnlySource(source: string | undefined): boolean {
@@ -70,6 +65,11 @@ function isVariableDeclaration(node: Node): node is VariableDeclaration {
 
 let userDefines: Record<string, string> = {};
 
+// Test files the SSR environment must serve cleaned
+const ssrCleanTestPaths = new Set<string>();
+
+const stripQuery = (id: string) => id.split("?")[0];
+
 const renderSSRCommand: ComponentFormat = async (
 	ctx,
 	componentPath: string,
@@ -96,100 +96,123 @@ const renderSSRLocalCommand: LocalComponentFormat = async (
 	ctx,
 	testFilePath: string,
 	componentName: string,
-	allLocalComponents: string[],
 	props: Record<string, unknown> = {},
 ) => {
 	const viteServer = ctx.project.vite;
 
-	const { readFileSync, writeFileSync, unlinkSync } = await import("node:fs");
-	const { dirname, join } = await import("node:path");
+	// Segment hashes are path-salted: SSR must load the client id
+	ssrCleanTestPaths.add(stripQuery(testFilePath));
+	const componentModule = await viteServer.ssrLoadModule(testFilePath);
+	const Component = componentModule[componentName];
 
-	const tempFileName = `ssr-test-${Date.now()}-${Math.random().toString(36).slice(2, 11)}.tsx`;
-	// temp file inthe same folder to support relative imports
-	const testFileDir = dirname(testFilePath);
-	const tempFilePath = join(testFileDir, tempFileName);
+	if (!Component) {
+		throw new Error(
+			`[vitest-browser-qwik]: Local component "${componentName}" not found in ${testFilePath}. Available exports: ${Object.keys(componentModule).join(", ")}`,
+		);
+	}
 
-	try {
-		const originalContent = readFileSync(testFilePath, "utf8");
-		const ast = parseSync(testFilePath, originalContent);
-		const s = new MagicString(originalContent);
-		const strippedIds = new Set<string>();
+	return await renderComponentToSSR(ctx, Component, props);
+};
 
-		function cleanTestFile(node: Node): undefined {
-			if (
-				isImportDeclaration(node) &&
-				isBrowserOnlySource(node.source?.value)
-			) {
-				for (const spec of node.specifiers || []) {
-					if (spec.local?.name) strippedIds.add(spec.local.name);
-				}
-				s.remove(node.start, node.end);
-				return undefined;
+/** Strips vitest-only code so a test module survives ssrLoadModule. */
+function cleanTestModuleForSSR(
+	id: string,
+	code: string,
+): { code: string; map: ReturnType<MagicString["generateMap"]> } | null {
+	const ast = parseSync(id, code);
+	const s = new MagicString(code);
+	const strippedIds = new Set<string>();
+	const localComponents = new Set<string>();
+	const exportedNames = new Set<string>();
+
+	function cleanTestFile(node: Node): undefined {
+		if (isImportDeclaration(node) && isBrowserOnlySource(node.source?.value)) {
+			for (const spec of node.specifiers || []) {
+				if (spec.local?.name) strippedIds.add(spec.local.name);
 			}
+			s.remove(node.start, node.end);
+			return undefined;
+		}
 
-			if (
-				isExpressionStatement(node) &&
-				node.expression?.type === "CallExpression"
-			) {
-				const callExpr = node.expression;
-				if (callExpr.callee.type === "Identifier") {
-					const calleeName = callExpr.callee.name;
-					if (
-						calleeName === "test" ||
-						calleeName === "describe" ||
-						calleeName === "it"
-					) {
-						s.remove(node.start, node.end);
-						return undefined;
-					}
-				}
-			}
-
-			if (isVariableDeclaration(node)) {
-				const allReference = node.declarations.every((d) =>
-					referencesStrippedId(d.init as Node | null, strippedIds),
-				);
-				if (allReference) {
-					for (const d of node.declarations) {
-						if (d.id.type === "Identifier") strippedIds.add(d.id.name);
-					}
+		if (
+			isExpressionStatement(node) &&
+			node.expression?.type === "CallExpression"
+		) {
+			const callExpr = node.expression;
+			if (callExpr.callee.type === "Identifier") {
+				const calleeName = callExpr.callee.name;
+				if (
+					calleeName === "test" ||
+					calleeName === "describe" ||
+					calleeName === "it"
+				) {
 					s.remove(node.start, node.end);
 					return undefined;
 				}
 			}
-
-			traverseChildren(node, cleanTestFile);
-			return undefined;
 		}
 
-		cleanTestFile(ast.program);
-
-		let cleanedContent = s.toString();
-		if (allLocalComponents.length > 0) {
-			const exportStatement = `\n\n// Auto-generated exports for local components\nexport { ${allLocalComponents.join(", ")} };`;
-			cleanedContent += exportStatement;
+		if (node.type === "ExportNamedDeclaration") {
+			const exportNode = node as Node & {
+				specifiers?: { exported?: { name?: string } }[];
+				declaration?: VariableDeclaration | null;
+			};
+			for (const spec of exportNode.specifiers || []) {
+				if (spec.exported?.name) exportedNames.add(spec.exported.name);
+			}
+			if (
+				exportNode.declaration &&
+				isVariableDeclaration(exportNode.declaration)
+			) {
+				for (const d of exportNode.declaration.declarations) {
+					if (d.id.type === "Identifier") exportedNames.add(d.id.name);
+				}
+			}
 		}
 
-		writeFileSync(tempFilePath, cleanedContent, "utf8");
-
-		const componentModule = await viteServer.ssrLoadModule(tempFilePath);
-		const Component = componentModule[componentName];
-
-		if (!Component) {
-			throw new Error(
-				`[vitest-browser-qwik]: Local component "${componentName}" not found in ${testFilePath}. Available exports: ${Object.keys(componentModule).join(", ")}`,
+		if (isVariableDeclaration(node)) {
+			const allReference = node.declarations.every((d) =>
+				referencesStrippedId(d.init as Node | null, strippedIds),
 			);
+			if (allReference) {
+				for (const d of node.declarations) {
+					if (d.id.type === "Identifier") strippedIds.add(d.id.name);
+				}
+				s.remove(node.start, node.end);
+				return undefined;
+			}
 		}
 
-		return await renderComponentToSSR(ctx, Component, props);
-	} finally {
-		try {
-			unlinkSync(tempFilePath);
-		} catch (cleanupError) {
-			console.warn("Failed to clean up temporary file:", cleanupError);
+		if (
+			isVariableDeclarator(node) &&
+			node.id.type === "Identifier" &&
+			node.init?.type === "CallExpression" &&
+			node.init.callee.type === "Identifier" &&
+			node.init.callee.name === "component$"
+		) {
+			localComponents.add(node.id.name);
 		}
+
+		traverseChildren(node, cleanTestFile);
+		return undefined;
 	}
-};
+
+	cleanTestFile(ast.program);
+
+	const toExport = [...localComponents].filter((n) => !exportedNames.has(n));
+	if (toExport.length > 0) {
+		s.append(
+			`\n\n// Auto-generated exports for local components\nexport { ${toExport.join(", ")} };`,
+		);
+	}
+
+	if (!s.hasChanged()) return null;
+
+	return {
+		code: s.toString(),
+		map: s.generateMap({ hires: true }),
+	};
+}
 
 export function testSSR(): Plugin {
 	return {
@@ -211,6 +234,12 @@ export function testSSR(): Plugin {
 				code: /renderSSR/,
 			},
 			async handler(code, id) {
+				const environmentName = this?.environment?.name;
+				if (environmentName && environmentName !== "client") {
+					if (!ssrCleanTestPaths.has(stripQuery(id))) return null;
+					return cleanTestModuleForSSR(id, code);
+				}
+
 				const ast = parseSync(id, code);
 				if (!hasRenderSSRCallInAST(ast.program, code)) return null;
 
@@ -303,12 +332,8 @@ export function testSSR(): Plugin {
 
 						const localComponentCode = localComponents.get(componentName);
 						if (localComponentCode) {
-							const allLocalComponentNames = Array.from(localComponents.keys());
-							const localComponentsArray = JSON.stringify(
-								allLocalComponentNames,
-							);
 							const replacement = `(async () => {
-								const { html } = await commands.renderSSRLocal("${id}", "${componentName}", ${localComponentsArray}${propsStr});
+								const { html } = await commands.renderSSRLocal("${id}", "${componentName}"${propsStr});
 								return renderServerHTML(html);
 							})()`;
 							s.overwrite(node.start, node.end, replacement);

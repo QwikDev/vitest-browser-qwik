@@ -1,5 +1,6 @@
 import type { JSXOutput } from "@qwik.dev/core";
-import { component$, render as qwikRender } from "@qwik.dev/core";
+import { inlinedQrl, render as qwikRender } from "@qwik.dev/core";
+import { componentQrl, getDomContainer } from "@qwik.dev/core/internal";
 import { getQwikLoaderScript } from "@qwik.dev/core/server";
 import type { Locator, LocatorSelectors } from "vitest/browser";
 import { type PrettyDOMOptions, utils } from "vitest/browser";
@@ -29,9 +30,21 @@ export interface SSRRenderOptions {
 }
 
 const mountedContainers = new Set<HTMLElement>();
+// Only SSR-resumed containers carry per-page vnode-data state that qDestroy must
+// reset; CSR renders don't, and qDestroy there would strip q:container before
+// teardown blur handlers resolve (Code(Q24)).
+const ssrContainers = new WeakSet<HTMLElement>();
 let qwikLoaderInjected = false;
 
+function findQwikContainer(container: HTMLElement): Element | null {
+	return container.querySelector("[q\\:container]");
+}
+
 function destroyContainer(container: HTMLElement) {
+	if (ssrContainers.has(container)) {
+		const qContainer = findQwikContainer(container);
+		(qContainer as { qDestroy?: () => void } | null)?.qDestroy?.();
+	}
 	container.innerHTML = "";
 	mountedContainers.delete(container);
 	if (container.parentNode === document.body) {
@@ -101,23 +114,26 @@ export async function render(
 
 function setHTMLWithScripts(container: HTMLElement, html: string) {
 	container.innerHTML = html;
-	// Find all script tags inside the container
 	const scripts = container.querySelectorAll("script");
 
+	// Recreate script tags to trigger execution
 	scripts.forEach((oldScript) => {
 		const newScript = document.createElement("script");
 
-		// Copy attributes (like src, type, etc.)
 		for (const attr of Array.from(oldScript.attributes)) {
 			newScript.setAttribute(attr.name, attr.value);
 		}
 
-		// Inline script content
 		newScript.text = oldScript.textContent ?? "";
 
-		// Replace the old script with the new one to trigger execution
 		oldScript.parentNode?.replaceChild(newScript, oldScript);
 	});
+}
+
+function resumeQwikContainer(container: HTMLElement) {
+	const qContainer = findQwikContainer(container);
+	if (!qContainer) return;
+	getDomContainer(qContainer);
 }
 
 export function renderServerHTML(
@@ -127,6 +143,8 @@ export function renderServerHTML(
 	const setup = setupContainer(baseElement, container);
 
 	setHTMLWithScripts(setup.container, html);
+	resumeQwikContainer(setup.container);
+	ssrContainers.add(setup.container);
 
 	return createRenderResult(setup.container, setup.baseElement);
 }
@@ -146,24 +164,28 @@ export async function renderHook<Result>(
 		resolveRender = resolve;
 	});
 
-	const TestHookComponent = component$(() => {
-		const result = hook();
-		resultContainer.value = result;
+	const runner = () => {
+		resultContainer.value = hook();
 		resolveRender();
-		return <div data-testid="hook-result"></div>;
-	});
+	};
 
-	const screen = await render(<TestHookComponent />);
+	// component$ needs the optimizer (never runs on the published dist); the runner
+	// rides in as a prop so it stays out of the serialized closure.
+	const TestHookComponent = componentQrl<{ runner: () => void }>(
+		inlinedQrl(({ runner }: { runner: () => void }) => {
+			runner();
+			return <div data-testid="hook-result"></div>;
+		}, "TestHookComponent_render"),
+	);
 
-	// Wait for the component to actually render
+	const screen = await render(<TestHookComponent runner={runner} />);
+
 	await renderPromise;
 
+	// renderPromise only resolves after the runner ran, so the result is set
+	// (and may legitimately be undefined).
 	return {
-		result:
-			resultContainer.value ??
-			(() => {
-				throw new Error("Hook result not available");
-			})(),
+		result: resultContainer.value as Result,
 		unmount: () => {
 			screen.unmount();
 		},

@@ -1,3 +1,4 @@
+import { dirname, relative, resolve } from "node:path";
 import type {
 	BindingIdentifier,
 	CallExpression,
@@ -16,8 +17,7 @@ import type {
 	VariableDeclarator,
 } from "@oxc-project/types";
 import type { Component } from "@qwik.dev/core";
-import type { QwikManifest, SegmentAnalysis } from "@qwik.dev/core/optimizer";
-import { dirname, relative, resolve } from "node:path";
+import type { QwikManifest } from "@qwik.dev/core/optimizer";
 import { ResolverFactory } from "oxc-resolver";
 import type { ViteDevServer } from "vite";
 import type { BrowserCommandContext } from "vitest/node";
@@ -241,7 +241,6 @@ const getClientModule = async (viteServer: ViteDevServer, moduleId: string) => {
 		);
 	}
 	const module = clientEnv.moduleGraph.getModuleById(resolvedId);
-	// console.log("Resolved client module", moduleId, resolved, module);
 	if (!module) {
 		throw new Error(`Module "${moduleId}" not found in client module graph.`);
 	}
@@ -262,46 +261,36 @@ export async function renderComponentToSSR(
 	const { renderToStream } =
 		serverModule as typeof import("@qwik.dev/core/server");
 
-	// Generate the manifest mapping
+	// QRLs resolve against the browser's vite server, not ctx.project.vite.
+	const browserViteServer = (ctx.project.browser?.vite ??
+		viteServer) as ViteDevServer;
+	// Core derives user-segment URLs itself; we only override the handler symbols.
 	const mapping: QwikManifest["mapping"] = {};
-	// First, transform the input file for client
-	if (!ctx.testPath) {
-		throw new Error("ctx.testPath is required for SSR rendering");
-	}
-	const module = await getClientModule(viteServer, ctx.testPath);
-	// Now find all the generated segments
-	for (const importedModule of module?.importedModules || []) {
-		const meta = importedModule.info?.meta;
-		if (meta?.segment) {
-			const symbol = (meta.segment as SegmentAnalysis).hash;
-			if (symbol && importedModule.id) {
-				mapping[symbol] = importedModule.url;
-			}
-		}
-	}
-	// qwik-internal qrl handlers
 	const handlersModule = await getClientModule(
-		viteServer,
+		browserViteServer,
 		"@qwik.dev/core/handlers.mjs",
 	);
 	const handlersUrl = handlersModule.url;
 	if (!handlersUrl) {
 		throw new Error("Handlers module URL could not be resolved");
 	}
-	const handlerNames = Object.keys(serverModule).filter((key) => /^_[a-z]+$/.test(key));
+	const handlerNames = Object.keys(serverModule).filter((key) =>
+		/^_[a-z]+$/.test(key),
+	);
 	for (const key of handlerNames) {
 		mapping[key] = handlersUrl;
 	}
+	// Minimal manifest just activates core's dev symbol-mapper.
 	const qwikManifest = {
 		manifestHash: "dev",
 		mapping,
 	} as QwikManifest;
 
-	//  await Promise.allSettled([...viteServer.moduleGraph.idToModuleMap.keys()].map(id => viteServer.environments.client.fetchModule(id)));
-	DEBUG && console.log('mapping', mapping);
+	DEBUG && console.log("mapping", mapping);
 
-	let html =
-		DEBUG ? "<script>var _import=(s)=>{console.log('importing', s);return import(s)}</script>" : "";
+	let html = DEBUG
+		? "<script>var _import=(s)=>{console.log('importing', s);return import(s)};document.addEventListener('qerror',(e)=>console.error('QERROR', e.detail?.error?.stack || e.detail?.error || e.detail));</script>"
+		: "";
 
 	await renderToStream(jsxElement, {
 		manifest: qwikManifest,
