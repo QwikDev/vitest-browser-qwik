@@ -1,93 +1,93 @@
 {
-  "name": "vitest-browser-qwik",
-  "version": "0.3.11",
-  "packageManager": "pnpm@10.13.1",
-  "description": "Render Qwik components using Vitest Browser Mode",
-  "type": "module",
-  "license": "MIT",
-  "homepage": "https://github.com/kunai-consulting/vitest-browser-qwik#readme",
-  "bugs": {
-    "url": "https://github.com/kunai-consulting/vitest-browser-qwik/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/kunai-consulting/vitest-browser-qwik.git"
-  },
-  "author": "Kunai Consulting <kunaico.com>",
-  "files": [
-    "*.d.ts",
-    "*.mjs",
-    "dist"
-  ],
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./pure": {
-      "types": "./dist/pure.d.ts",
-      "default": "./dist/pure.js"
-    },
-    "./ssr-plugin": {
-      "types": "./dist/ssr-plugin.d.ts",
-      "default": "./dist/ssr-plugin.js"
-    }
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "check": "biome ci .",
-    "check.format": "biome format .",
-    "check.lint": "biome check .",
-    "fix": "pnpm lint && pnpm format",
-    "format": "biome format --write .",
-    "lint": "biome check --write --unsafe .",
-    "build": "tsdown",
-    "dev": "tsdown --watch",
-    "test": "vitest",
-    "test:ssr-plugin": "vitest --config vitest.ssr-plugin.config.ts",
-    "snapshot": "vitest -u",
-    "typecheck": "tsc --noEmit",
-    "release": "bumpp && pnpm publish",
-    "prepublishOnly": "pnpm run build"
-  },
-  "dependencies": {
-    "@oxc-project/types": "^0.95.0",
-    "magic-string": "^0.30.17",
-    "oxc-parser": "^0.95.0",
-    "oxc-resolver": "^11.11.1"
-  },
-  "peerDependencies": {
-    "@qwik.dev/core": ">=2.0.0-beta.37",
-    "vite": ">=6.3.5",
-    "vitest": "^4.0.18 || ^5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "vitest": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.0.0",
-    "@playwright/test": "see flake.nix",
-    "@qwik.dev/core": "https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051",
-    "@types/node": "^22.15.17",
-    "@vitest/browser-playwright": "^4.0.18",
-    "bumpp": "^10.1.0",
-    "ignore": "^7.0.5",
-    "magic-regexp": "^0.10.0",
-    "tsdown": "^0.15.9",
-    "typescript": "^5.8.3",
-    "vitest": "^4.0.18"
-  },
-  "pnpm": {
-    "overrides": {
-      "@playwright/test": "1.56.1",
-      "playwright": "1.56.1"
-    }
-  }
+	"name": "vitest-browser-qwik",
+	"version": "0.3.11",
+	"packageManager": "pnpm@10.13.1",
+	"description": "Render Qwik components using Vitest Browser Mode",
+	"type": "module",
+	"license": "MIT",
+	"homepage": "https://github.com/kunai-consulting/vitest-browser-qwik#readme",
+	"bugs": {
+		"url": "https://github.com/kunai-consulting/vitest-browser-qwik/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kunai-consulting/vitest-browser-qwik.git"
+	},
+	"author": "Kunai Consulting <kunaico.com>",
+	"files": [
+		"*.d.ts",
+		"*.mjs",
+		"dist"
+	],
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./pure": {
+			"types": "./dist/pure.d.ts",
+			"default": "./dist/pure.js"
+		},
+		"./ssr-plugin": {
+			"types": "./dist/ssr-plugin.d.ts",
+			"default": "./dist/ssr-plugin.js"
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"check": "biome ci .",
+		"check.format": "biome format .",
+		"check.lint": "biome check .",
+		"fix": "pnpm lint && pnpm format",
+		"format": "biome format --write .",
+		"lint": "biome check --write --unsafe .",
+		"build": "tsdown",
+		"dev": "tsdown --watch",
+		"test": "vitest",
+		"test:ssr-plugin": "vitest --config vitest.ssr-plugin.config.ts",
+		"snapshot": "vitest -u",
+		"typecheck": "tsc --noEmit",
+		"release": "bumpp && pnpm publish",
+		"prepublishOnly": "pnpm run build"
+	},
+	"dependencies": {
+		"@oxc-project/types": "^0.95.0",
+		"magic-string": "^0.30.17",
+		"oxc-parser": "^0.95.0",
+		"oxc-resolver": "^11.11.1"
+	},
+	"peerDependencies": {
+		"@qwik.dev/core": ">=2.0.0-beta.37",
+		"vite": ">=6.3.5",
+		"vitest": "^4.0.18 || ^5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.0.0",
+		"@playwright/test": "see flake.nix",
+		"@qwik.dev/core": "https://pkg.pr.new/QwikDev/qwik/@qwik.dev/core@8e75051",
+		"@types/node": "^22.15.17",
+		"@vitest/browser-playwright": "^4.0.18",
+		"bumpp": "^10.1.0",
+		"ignore": "^7.0.5",
+		"magic-regexp": "^0.10.0",
+		"tsdown": "^0.15.9",
+		"typescript": "^5.8.3",
+		"vitest": "^4.0.18"
+	},
+	"pnpm": {
+		"overrides": {
+			"@playwright/test": "1.56.1",
+			"playwright": "1.56.1"
+		}
+	}
 }
